@@ -1,0 +1,4 @@
+#Game Settings
+#Sun Jun 08 22:38:16 MST 2025
+difficultyLevel=12
+obstaclesEnabled=true
