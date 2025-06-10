@@ -59,7 +59,6 @@ public class Apple {
         }
     }
 
-
     public Point getPosition() {
         return position;
     }

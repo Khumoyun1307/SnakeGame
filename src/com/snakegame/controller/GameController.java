@@ -125,10 +125,11 @@ public class GameController implements ActionListener, KeyListener {
     public void actionPerformed(ActionEvent e) {
         if (!paused && gameState.isRunning()) {
             // Adjust timer delay based on slowed state
+            int baseDelay = GameSettings.getSpeedDelayFromDifficultyLevel();
             if (gameState.isSlowed()) {
-                timer.setDelay(GameConfig.SLOWDOWN_DELAY);
+                timer.setDelay(baseDelay + GameConfig.SLOWDOWN_OFFSET_MS);
             } else {
-                timer.setDelay(GameConfig.BASE_DELAY);
+                timer.setDelay(baseDelay);
             }
             timer.setDelay(GameSettings.getSpeedDelayFromDifficultyLevel());
             gameState.update();

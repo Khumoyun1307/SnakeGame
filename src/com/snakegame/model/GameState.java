@@ -65,16 +65,23 @@ public class GameState {
         AppleType appleType = apple.getType();
         snake.move(ateApple);
 
+        Set<Point> forbidden = new HashSet<>(snake.getBody());
+        forbidden.addAll(obstacles);
+
         if (ateApple) {
             applesEaten++;
             SoundPlayer.play("eatApple.wav");
+
             int baseScore = appleType.getScoreValue();
             score += doubleScoreActive ? baseScore * 2 : baseScore;
 
             applyAppleEffect(appleType);
-            Set<Point> forbidden = new HashSet<>(snake.getBody());
-            forbidden.addAll(obstacles);
             apple.spawnRandomlyWeighted(applesEaten, score, forbidden);
+        } else {
+            long now = System.currentTimeMillis();
+            if (apple.getVisibleDurationMs() > 0 && now - apple.getSpawnTime() > apple.getVisibleDurationMs()) {
+                apple.spawnNew(AppleType.NORMAL,forbidden);
+            }
         }
 
         checkCollision();
