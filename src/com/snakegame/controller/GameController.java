@@ -131,7 +131,7 @@ public class GameController implements ActionListener, KeyListener {
             } else {
                 timer.setDelay(baseDelay);
             }
-            timer.setDelay(GameSettings.getSpeedDelayFromDifficultyLevel());
+
             gameState.update();
             inputLocked = false;
             repaintCallback.run();

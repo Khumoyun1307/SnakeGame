@@ -1,4 +1,4 @@
 #Game Settings
-#Tue Jun 10 03:04:35 MST 2025
-difficultyLevel=12
+#Tue Jun 10 03:18:17 MST 2025
+difficultyLevel=38
 obstaclesEnabled=false
