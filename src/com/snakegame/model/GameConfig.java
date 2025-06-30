@@ -7,7 +7,7 @@ public class GameConfig {
     public static final int BASE_DELAY = 75;
     public static final int SLOWDOWN_OFFSET_MS = 60;
 
-    // Power-up spawn conditions
+    // Power-up spawn conditions   
     public static final int BIG_APPLE_EVERY = 8;
     public static final int GOLDEN_APPLE_EVERY = 17;
     public static final int SLOWDOWN_APPLE_EVERY = 25;
