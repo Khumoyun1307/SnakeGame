@@ -1,0 +1,4 @@
+#Game Settings
+#Thu Jun 26 17:31:21 GMT+05:00 2025
+difficultyLevel=20
+obstaclesEnabled=false
