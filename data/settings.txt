@@ -1,4 +1,7 @@
 #Game Settings
-#Thu Jun 26 17:31:21 GMT+05:00 2025
+#Mon Jun 30 20:32:15 GMT+05:00 2025
+currentMode=MAP_SELECT
 difficultyLevel=20
 obstaclesEnabled=false
+raceThreshold=20
+selectedMapId=1

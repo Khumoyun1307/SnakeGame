@@ -1,4 +1,4 @@
-package test.snakegame.model;
+package test.snakegame;
 
 import com.snakegame.model.Direction;
 import com.snakegame.model.Snake;

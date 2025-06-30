@@ -1,5 +1,7 @@
 package com.snakegame.ui;
 
+import com.snakegame.config.GameSettings;
+import com.snakegame.mode.GameMode;
 import com.snakegame.sound.BackgroundMusicPlayer;
 import com.snakegame.view.GamePanel;
 import javax.swing.*;
@@ -49,30 +51,37 @@ public class GameFrame extends JFrame {
     private void handleMenuAction(ActionEvent e) {
         switch (e.getActionCommand()) {
             case "play" -> {
-                // BackgroundMusicPlayer.play("backgroundMusic.wav", true);
+                // Start in whatever mode was last set (default STANDARD)
                 recreateGamePanel();
                 cardLayout.show(cardPanel, "game");
                 gamePanel.startGame();
             }
-            case "stats" -> {
-                StatsPanel statsPanel = new StatsPanel(evt -> cardLayout.show(cardPanel, "menu"));
-                replaceCard("stats", statsPanel);
-                cardLayout.show(cardPanel, "stats");
+            case "race" -> {
+                GameSettings.setCurrentMode(GameMode.RACE);
+                GameSettings.setSelectedMapId(1);
+                recreateGamePanel();
+                cardLayout.show(cardPanel, "game");
+                gamePanel.startGame();
+            }
+            case "mode" -> {
+                JPanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
+                replaceCard("mode", modePanel);
+                cardLayout.show(cardPanel, "mode");
+            }
+            case "difficulty" -> {
+                JPanel diffPanel = new DifficultyPanel(() -> cardLayout.show(cardPanel, "menu"));
+                replaceCard("difficulty", diffPanel);
+                cardLayout.show(cardPanel, "difficulty");
             }
             case "settings" -> {
                 SettingsPanel settingsPanel = new SettingsPanel(evt -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("settings", settingsPanel);
                 cardLayout.show(cardPanel, "settings");
             }
-            case "difficulty" -> {
-                JPanel diffPanel = new DifficultyPanel(() -> cardLayout.show(cardPanel, "menu"));
-                cardPanel.add(diffPanel, "difficulty");
-                cardLayout.show(cardPanel, "difficulty");
-            }
-            case "mode" -> {
-                JPanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
-                cardPanel.add(modePanel, "mode");
-                cardLayout.show(cardPanel, "mode");
+            case "stats" -> {
+                StatsPanel statsPanel = new StatsPanel(evt -> cardLayout.show(cardPanel, "menu"));
+                replaceCard("stats", statsPanel);
+                cardLayout.show(cardPanel, "stats");
             }
             case "exit" -> System.exit(0);
         }

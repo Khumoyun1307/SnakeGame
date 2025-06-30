@@ -1,5 +1,9 @@
-package com.snakegame.model;
+package test.snakegame;
 
+import com.snakegame.model.Apple;
+import com.snakegame.model.Direction;
+import com.snakegame.model.GameState;
+import com.snakegame.model.Snake;
 import org.junit.jupiter.api.Test;
 import java.awt.*;
 import java.util.Deque;

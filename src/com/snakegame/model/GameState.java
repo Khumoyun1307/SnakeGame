@@ -1,7 +1,11 @@
 package com.snakegame.model;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapConfig;
+import com.snakegame.mode.MapManager;
 import com.snakegame.sound.SoundPlayer;
+import com.snakegame.util.ProgressManager;
 
 import java.awt.*;
 import java.util.*;
@@ -26,13 +30,32 @@ public class GameState {
     private final List<Point> obstacles = new ArrayList<>();
 
     public GameState() {
-        Point start = new Point(GameConfig.UNIT_SIZE * 5, GameConfig.UNIT_SIZE * 5);
+        // Initialize snake
+        Point start = new Point(
+                GameConfig.UNIT_SIZE * 5,
+                GameConfig.UNIT_SIZE * 5
+        );
         this.snake = new Snake(start, 6, Direction.RIGHT);
 
-        if (GameSettings.isObstaclesEnabled()) {
-            generateObstacles(15); // Or any number
+        // Configure obstacles based on selected mode
+        GameMode mode = GameSettings.getCurrentMode();
+        if (mode == GameMode.STANDARD) {
+            if (GameSettings.isObstaclesEnabled()) {
+                generateObstacles(15);
+            }
+        } else {
+            int mapId = GameSettings.getSelectedMapId();
+            MapConfig cfg = MapManager.getMap(mapId);
+            if (cfg != null) {
+                obstacles.addAll(cfg.getObstacles());
+            }
+            if (mode == GameMode.RACE) {
+                // ensure first map is unlocked
+                ProgressManager.unlockMap(mapId);
+            }
         }
 
+        // Spawn first apple avoiding obstacles and snake body
         Set<Point> forbidden = new HashSet<>(snake.getBody());
         forbidden.addAll(obstacles);
         this.apple = new Apple(forbidden);
@@ -76,11 +99,29 @@ public class GameState {
             score += doubleScoreActive ? baseScore * 2 : baseScore;
 
             applyAppleEffect(appleType);
+
+            // Race mode progression
+            if (GameSettings.getCurrentMode() == GameMode.RACE
+                    && applesEaten > 0
+                    && applesEaten % GameSettings.getRaceThreshold() == 0) {
+
+                int nextMap = GameSettings.getSelectedMapId() + 1;
+                MapConfig nextCfg = MapManager.getMap(nextMap);
+                if (nextCfg != null) {
+                    GameSettings.setSelectedMapId(nextMap);
+                    ProgressManager.unlockMap(nextMap);
+                    obstacles.clear();
+                    obstacles.addAll(nextCfg.getObstacles());
+                }
+            }
+
+            // Spawn next apple
             apple.spawnRandomlyWeighted(applesEaten, score, forbidden);
         } else {
             long now = System.currentTimeMillis();
-            if (apple.getVisibleDurationMs() > 0 && now - apple.getSpawnTime() > apple.getVisibleDurationMs()) {
-                apple.spawnNew(AppleType.NORMAL,forbidden);
+            if (apple.getVisibleDurationMs() > 0
+                    && now - apple.getSpawnTime() > apple.getVisibleDurationMs()) {
+                apple.spawnNew(AppleType.NORMAL, forbidden);
             }
         }
 

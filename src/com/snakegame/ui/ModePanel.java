@@ -1,33 +1,46 @@
 package com.snakegame.ui;
 
+import com.snakegame.config.GameSettings;
+import com.snakegame.mode.GameMode;
+import com.snakegame.util.ProgressManager;
 import javax.swing.*;
 import java.awt.*;
+import java.util.Set;
 
 public class ModePanel extends JPanel {
-
     public ModePanel(Runnable goBack) {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new BorderLayout());
         setBackground(Color.BLACK);
-        setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
 
-        JLabel title = new JLabel("🗺 Game Modes");
+        JLabel title = new JLabel("🗺 Select Map", SwingConstants.CENTER);
         title.setFont(new Font("Arial", Font.BOLD, 28));
         title.setForeground(Color.WHITE);
-        title.setAlignmentX(CENTER_ALIGNMENT);
+        add(title, BorderLayout.NORTH);
 
-        JLabel message = new JLabel("Coming soon...");
-        message.setFont(new Font("Arial", Font.ITALIC, 22));
-        message.setForeground(Color.LIGHT_GRAY);
-        message.setAlignmentX(CENTER_ALIGNMENT);
+        JPanel grid = new JPanel(new GridLayout(2, 5, 10, 10));
+        grid.setBackground(Color.BLACK);
+
+        Set<Integer> unlocked = ProgressManager.getUnlockedMaps();
+        for (int i = 1; i <= 10; i++) {
+            JButton btn = new JButton("Map " + i);
+            btn.setFont(new Font("Arial", Font.PLAIN, 16));
+            if (!unlocked.contains(i)) {
+                btn.setEnabled(false);
+                btn.setText("🔒 Map " + i);
+            }
+            final int mapId = i;
+            btn.addActionListener(e -> {
+                GameSettings.setCurrentMode(GameMode.MAP_SELECT);
+                GameSettings.setSelectedMapId(mapId);
+                goBack.run();
+            });
+            grid.add(btn);
+        }
+        add(grid, BorderLayout.CENTER);
 
         JButton back = new JButton("← Back");
-        back.setAlignmentX(CENTER_ALIGNMENT);
         back.addActionListener(e -> goBack.run());
-
-        add(title);
-        add(Box.createVerticalStrut(20));
-        add(message);
-        add(Box.createVerticalStrut(30));
-        add(back);
+        JPanel south = new JPanel(); south.setBackground(Color.BLACK); south.add(back);
+        add(south, BorderLayout.SOUTH);
     }
 }
