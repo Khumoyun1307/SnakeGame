@@ -1,7 +1,11 @@
 #Game Settings
-#Mon Jun 30 20:32:15 GMT+05:00 2025
+#Mon Jun 30 12:59:44 MST 2025
 currentMode=MAP_SELECT
 difficultyLevel=20
+musicEnabled=true
 obstaclesEnabled=false
+playerName=Player
 raceThreshold=20
-selectedMapId=1
+selectedMapId=4
+showGrid=false
+soundEnabled=false

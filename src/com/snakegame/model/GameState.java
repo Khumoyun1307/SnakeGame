@@ -7,13 +7,12 @@ import com.snakegame.mode.MapManager;
 import com.snakegame.sound.SoundPlayer;
 import com.snakegame.util.ProgressManager;
 
-import java.awt.*;
+import java.awt.Point;
 import java.util.*;
-import java.util.List;
 
 public class GameState {
-    private final Snake snake;
-    private final Apple apple;
+    private Snake snake;
+    private Apple apple;
     private int score = 0;
     private boolean running = true;
 
@@ -29,15 +28,18 @@ public class GameState {
 
     private final List<Point> obstacles = new ArrayList<>();
 
-    public GameState() {
-        // Initialize snake
-        Point start = new Point(
-                GameConfig.UNIT_SIZE * 5,
-                GameConfig.UNIT_SIZE * 5
-        );
-        this.snake = new Snake(start, 6, Direction.RIGHT);
+    // Unlock notification
+    private String unlockMessage = null;
+    private long unlockMessageEndTime = 0;
+    private static final long UNLOCK_MSG_DURATION_MS = 3000;
 
-        // Configure obstacles based on selected mode
+    public GameState() {
+        initGame();
+    }
+
+    private void initGame() {
+        // Configure obstacles
+        obstacles.clear();
         GameMode mode = GameSettings.getCurrentMode();
         if (mode == GameMode.STANDARD) {
             if (GameSettings.isObstaclesEnabled()) {
@@ -49,16 +51,12 @@ public class GameState {
             if (cfg != null) {
                 obstacles.addAll(cfg.getObstacles());
             }
-            if (mode == GameMode.RACE) {
-                // ensure first map is unlocked
-                ProgressManager.unlockMap(mapId);
-            }
+            // Ensure map unlocked for MAP_SELECT and RACE
+            ProgressManager.unlockMap(mapId);
         }
 
-        // Spawn first apple avoiding obstacles and snake body
-        Set<Point> forbidden = new HashSet<>(snake.getBody());
-        forbidden.addAll(obstacles);
-        this.apple = new Apple(forbidden);
+        // Reset snake and apple for new map
+        resetSnakeAndApple();
     }
 
     private void generateObstacles(int count) {
@@ -66,7 +64,10 @@ public class GameState {
         int maxY = GameConfig.SCREEN_HEIGHT / GameConfig.UNIT_SIZE;
         Random rand = new Random();
 
-        Set<Point> forbidden = new HashSet<>(snake.getBody());
+        Set<Point> forbidden = new HashSet<>();
+        if (snake != null) {
+            forbidden.addAll(snake.getBody());
+        }
 
         while (obstacles.size() < count) {
             Point p = new Point(
@@ -79,13 +80,34 @@ public class GameState {
         }
     }
 
+    private void resetSnakeAndApple() {
+        // Reset snake to default start
+        Point start = new Point(
+                GameConfig.UNIT_SIZE * 5,
+                GameConfig.UNIT_SIZE * 5
+        );
+        snake = new Snake(start, 6, Direction.RIGHT);
+
+        // Spawn apple avoiding obstacles and snake body
+        Set<Point> forbidden = new HashSet<>(snake.getBody());
+        forbidden.addAll(obstacles);
+        apple = new Apple(forbidden);
+
+        // Reset effects and apple count for new map
+        applesEaten = 0;
+        doubleScoreActive = false;
+        slowed = false;
+        reversedControls = false;
+    }
+
     public void update() {
         if (!running) return;
 
         updateEffects();
+        updateNotifications();
 
         boolean ateApple = snake.getHead().equals(apple.getPosition());
-        AppleType appleType = apple.getType();
+        AppleType type = apple.getType();
         snake.move(ateApple);
 
         Set<Point> forbidden = new HashSet<>(snake.getBody());
@@ -95,16 +117,14 @@ public class GameState {
             applesEaten++;
             SoundPlayer.play("eatApple.wav");
 
-            int baseScore = appleType.getScoreValue();
+            int baseScore = type.getScoreValue();
             score += doubleScoreActive ? baseScore * 2 : baseScore;
 
-            applyAppleEffect(appleType);
+            applyAppleEffect(type);
 
-            // Race mode progression
+            // Race mode transition
             if (GameSettings.getCurrentMode() == GameMode.RACE
-                    && applesEaten > 0
-                    && applesEaten % GameSettings.getRaceThreshold() == 0) {
-
+                    && applesEaten >= GameSettings.getRaceThreshold()) {
                 int nextMap = GameSettings.getSelectedMapId() + 1;
                 MapConfig nextCfg = MapManager.getMap(nextMap);
                 if (nextCfg != null) {
@@ -112,11 +132,13 @@ public class GameState {
                     ProgressManager.unlockMap(nextMap);
                     obstacles.clear();
                     obstacles.addAll(nextCfg.getObstacles());
+                    resetSnakeAndApple();
+                    setUnlockMessage("Map " + nextMap + " unlocked!");
                 }
+            } else {
+                // Normal apple spawn
+                apple.spawnRandomlyWeighted(applesEaten, score, forbidden);
             }
-
-            // Spawn next apple
-            apple.spawnRandomlyWeighted(applesEaten, score, forbidden);
         } else {
             long now = System.currentTimeMillis();
             if (apple.getVisibleDurationMs() > 0
@@ -126,23 +148,6 @@ public class GameState {
         }
 
         checkCollision();
-    }
-
-
-    private void updateEffects() {
-        long now = System.currentTimeMillis();
-
-        if (doubleScoreActive && now >= doubleScoreEndTime) {
-            doubleScoreActive = false;
-        }
-
-        if (slowed && now >= slowEndTime) {
-            slowed = false;
-        }
-
-        if (reversedControls && now >= reverseEndTime) {
-            reversedControls = false;
-        }
     }
 
     private void applyAppleEffect(AppleType type) {
@@ -163,69 +168,53 @@ public class GameState {
         }
     }
 
+    private void updateEffects() {
+        long now = System.currentTimeMillis();
+        if (doubleScoreActive && now >= doubleScoreEndTime) doubleScoreActive = false;
+        if (slowed && now >= slowEndTime) slowed = false;
+        if (reversedControls && now >= reverseEndTime) reversedControls = false;
+    }
 
+    private void updateNotifications() {
+        if (unlockMessage != null && System.currentTimeMillis() >= unlockMessageEndTime) {
+            unlockMessage = null;
+        }
+    }
+
+    private void setUnlockMessage(String message) {
+        this.unlockMessage = message;
+        this.unlockMessageEndTime = System.currentTimeMillis() + UNLOCK_MSG_DURATION_MS;
+    }
 
     private void checkCollision() {
         Point head = snake.getHead();
-
         // Border collision
-        if (head.x < 0 || head.x >= GameConfig.SCREEN_WIDTH || head.y < 0 || head.y >= GameConfig.SCREEN_HEIGHT) {
+        if (head.x < 0 || head.x >= GameConfig.SCREEN_WIDTH
+                || head.y < 0 || head.y >= GameConfig.SCREEN_HEIGHT) {
             running = false;
         }
-
         // Self collision
-        if (snake.isSelfColliding()) {
-            running = false;
-        }
-
-        // obstacle collision
-
-        if (obstacles.contains(head)) {
-            running = false;
-        }
+        if (snake.isSelfColliding()) running = false;
+        // Obstacle collision
+        if (obstacles.contains(head)) running = false;
     }
 
-    public boolean isRunning() {
-        return running;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public Snake getSnake() {
-        return snake;
-    }
-
-    public Apple getApple() {
-        return apple;
-    }
+    // Getters
+    public boolean isRunning() { return running; }
+    public int getScore() { return score; }
+    public Snake getSnake() { return snake; }
+    public Apple getApple() { return apple; }
+    public boolean isDoubleScoreActive() { return doubleScoreActive; }
+    public long getDoubleScoreEndTime() { return doubleScoreEndTime; }
+    public boolean isSlowed() { return slowed; }
+    public long getSlowEndTime() { return slowEndTime; }
+    public boolean isReversedControls() { return reversedControls; }
+    public List<Point> getObstacles() { return obstacles; }
+    /** Returns current unlock notification or null */
+    public String getUnlockMessage() { return unlockMessage; }
 
     public void setDirection(Direction direction) {
         snake.setDirection(direction);
     }
 
-    public boolean isDoubleScoreActive() {
-        return doubleScoreActive;
-    }
-
-    public boolean isSlowed() {
-        return slowed;
-    }
-
-    public long getDoubleScoreEndTime() {
-        return doubleScoreEndTime;
-    }
-
-    public boolean isReversedControls() {
-        return reversedControls;
-    }
-
-    public long getSlowEndTime() {
-        return slowEndTime;
-    }
-
-    public List<Point> getObstacles() {
-        return obstacles;
-    }
 }

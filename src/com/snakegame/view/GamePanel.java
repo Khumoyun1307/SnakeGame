@@ -11,7 +11,6 @@ public class GamePanel extends JPanel {
     private GameState gameState;
     private GameController controller;
 
-
     public GamePanel() {
         this.setPreferredSize(new Dimension(GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT));
         this.setBackground(Color.BLACK);
@@ -19,16 +18,14 @@ public class GamePanel extends JPanel {
         initGame();
     }
 
-
     private void initGame() {
         this.gameState = new GameState();
 
         // Restart callback to reset everything
-
         Runnable restartCallback = () -> {
             SwingUtilities.invokeLater(() -> {
-                removeKeyListener(controller); // Remove old listener
-                initGame();                   // Reinitialize
+                removeKeyListener(controller);
+                initGame();
                 repaint();
                 requestFocusInWindow();
                 controller.start();
@@ -38,7 +35,6 @@ public class GamePanel extends JPanel {
         Runnable goToMainMenuCallback = () -> {
             SwingUtilities.invokeLater(() -> {
                 removeKeyListener(controller);
-                // Tell GameFrame to go back to main menu
                 firePropertyChange("goToMenu", false, true);
             });
         };
@@ -48,10 +44,9 @@ public class GamePanel extends JPanel {
     }
 
     public void startGame() {
-        requestFocusInWindow(); // ensure key input works
-        controller.start();     // ✅ only start when called explicitly
+        requestFocusInWindow();
+        controller.start();
     }
-
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -68,33 +63,31 @@ public class GamePanel extends JPanel {
         }
     }
 
-    private void drawCenteredText(Graphics g, String text, int y, Color color) {
-        g.setColor(color);
-        g.setFont(new Font("Arial", Font.BOLD, 22));
-        FontMetrics fm = g.getFontMetrics();
-        int x = (GameConfig.SCREEN_WIDTH - fm.stringWidth(text)) / 2;
-        g.drawString(text, x, y);
-    }
-
-
     private void drawGame(Graphics g) {
+        // New: show unlock notification if present
+        String unlockMsg = gameState.getUnlockMessage();
+        if (unlockMsg != null) {
+            g.setColor(Color.YELLOW);
+            g.setFont(new Font("Arial", Font.BOLD, 18));
+            FontMetrics fm = g.getFontMetrics();
+            int x = (GameConfig.SCREEN_WIDTH - fm.stringWidth(unlockMsg)) / 2;
+            g.drawString(unlockMsg, x, 40);
+        }
+
         if (!gameState.isRunning()) {
             drawGameOver(g);
             return;
         }
 
         // Draw apple
-
         Apple appleObj = gameState.getApple();
         AppleType type = appleObj.getType();
         Point pos = appleObj.getPosition();
 
-        // Pumping effect for featured apples
         long now = System.currentTimeMillis();
         long sinceSpawn = now - appleObj.getSpawnTime();
         long duration = appleObj.getVisibleDurationMs();
         boolean animatePulse = duration > 0;
-
         float scale = 1.0f;
         if (animatePulse) {
             float pulse = (float) Math.sin((sinceSpawn % 1000) / 1000.0 * 2 * Math.PI);
@@ -111,7 +104,7 @@ public class GamePanel extends JPanel {
             case GOLDEN -> {
                 g.fillOval(drawX, drawY, size, size);
                 g.setColor(Color.WHITE);
-                g.drawOval(drawX, drawY, size, size); // glow ring
+                g.drawOval(drawX, drawY, size, size);
             }
             case SLOWDOWN -> g.fillRect(drawX, drawY, size, size);
             case REVERSE -> {
@@ -123,6 +116,7 @@ public class GamePanel extends JPanel {
             default -> g.fillOval(drawX, drawY, size, size);
         }
 
+        // Draw obstacles
         for (Point obs : gameState.getObstacles()) {
             g.setColor(Color.GRAY);
             g.fillRect(obs.x, obs.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
@@ -133,25 +127,30 @@ public class GamePanel extends JPanel {
         // Draw snake
         int index = 0;
         for (Point p : gameState.getSnake().getBody()) {
-            if (index++ == 0) {
-                g.setColor(Color.GREEN); // head
-            } else {
-                g.setColor(new Color(45, 180, 0)); // body
-            }
+            g.setColor(index++ == 0 ? Color.GREEN : new Color(45, 180, 0));
             g.fillOval(p.x, p.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
         }
 
+        // Status overlays
         if (gameState.isReversedControls()) {
-            drawCenteredText(g, "🔄 Reverse Controls Active!", 40, Color.MAGENTA);
+            drawCenteredText(g, "🔄 Reverse Controls Active!", 60, Color.MAGENTA);
         } else if (gameState.isDoubleScoreActive()) {
             long timeLeft = (gameState.getDoubleScoreEndTime() - System.currentTimeMillis()) / 1000;
-            drawCenteredText(g, "💰 Double Points: " + timeLeft + "s", 40, Color.YELLOW);
+            drawCenteredText(g, "💰 Double Points: " + timeLeft + "s", 60, Color.YELLOW);
         } else if (gameState.isSlowed()) {
             long timeLeft = (gameState.getSlowEndTime() - System.currentTimeMillis()) / 1000;
-            drawCenteredText(g, "⏳ Slow Mode: " + timeLeft + "s", 40, Color.CYAN);
+            drawCenteredText(g, "⏳ Slow Mode: " + timeLeft + "s", 60, Color.CYAN);
         }
 
         drawScore(g);
+    }
+
+    private void drawCenteredText(Graphics g, String text, int y, Color color) {
+        g.setColor(color);
+        g.setFont(new Font("Arial", Font.BOLD, 22));
+        FontMetrics fm = g.getFontMetrics();
+        int x = (GameConfig.SCREEN_WIDTH - fm.stringWidth(text)) / 2;
+        g.drawString(text, x, y);
     }
 
     private void drawScore(Graphics g) {
@@ -167,7 +166,6 @@ public class GamePanel extends JPanel {
                 g.getFont().getSize());
     }
 
-
     private void drawGameOver(Graphics g) {
         g.setColor(Color.RED);
         g.setFont(new Font("Ink Free", Font.BOLD, 75));
@@ -177,5 +175,4 @@ public class GamePanel extends JPanel {
                 (GameConfig.SCREEN_WIDTH - metrics.stringWidth(gameOverText)) / 2,
                 GameConfig.SCREEN_HEIGHT / 2);
     }
-
 }

@@ -12,19 +12,20 @@ public class GameSettings {
     private static boolean obstaclesEnabled = false;
     private static int difficultyLevel = 20;
 
-    // New mode settings
+    // Mode settings
     private static GameMode currentMode = GameMode.STANDARD;
     private static int selectedMapId = 1;
-    private static int raceThreshold = 20; // apples to advance in RACE mode
+    private static int raceThreshold = 20;
 
+    // New settings
+    private static boolean soundEnabled = true;
+    private static boolean musicEnabled = true;
+    private static boolean showGrid = true;
+    private static String playerName = "Player";
+
+    // Difficulty
     public static Difficulty getDifficulty() { return difficulty; }
-    public static void setDifficulty(Difficulty d) { difficulty = d; }
-
-    public static boolean isObstaclesEnabled() { return obstaclesEnabled; }
-    public static void setObstaclesEnabled(boolean enabled) {
-        obstaclesEnabled = enabled;
-        GameSettingsManager.save();
-    }
+    public static void setDifficulty(Difficulty d) { difficulty = d; GameSettingsManager.save(); }
 
     public static int getDifficultyLevel() { return difficultyLevel; }
     public static void setDifficultyLevel(int level) {
@@ -32,7 +33,13 @@ public class GameSettings {
         GameSettingsManager.save();
     }
 
-    // New getters/setters for modes
+    public static boolean isObstaclesEnabled() { return obstaclesEnabled; }
+    public static void setObstaclesEnabled(boolean enabled) {
+        obstaclesEnabled = enabled;
+        GameSettingsManager.save();
+    }
+
+    // Mode getters/setters
     public static GameMode getCurrentMode() { return currentMode; }
     public static void setCurrentMode(GameMode mode) {
         currentMode = mode;
@@ -49,6 +56,33 @@ public class GameSettings {
     public static void setRaceThreshold(int threshold) {
         raceThreshold = threshold;
         GameSettingsManager.save();
+    }
+
+    // New settings getters/setters
+    public static boolean isSoundEnabled() { return soundEnabled; }
+    public static void setSoundEnabled(boolean enabled) {
+        soundEnabled = enabled;
+        GameSettingsManager.save();
+    }
+
+    public static boolean isMusicEnabled() { return musicEnabled; }
+    public static void setMusicEnabled(boolean enabled) {
+        musicEnabled = enabled;
+        GameSettingsManager.save();
+    }
+
+    public static boolean isShowGrid() { return showGrid; }
+    public static void setShowGrid(boolean show) {
+        showGrid = show;
+        GameSettingsManager.save();
+    }
+
+    public static String getPlayerName() { return playerName; }
+    public static void setPlayerName(String name) {
+        if (name != null && !name.isEmpty()) {
+            playerName = name;
+            GameSettingsManager.save();
+        }
     }
 
     public static int getSpeedDelayFromDifficultyLevel() {

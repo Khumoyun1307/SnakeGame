@@ -22,7 +22,6 @@ public class GameSettingsManager {
                     Boolean.parseBoolean(props.getProperty("obstaclesEnabled", "false"))
             );
 
-            // Load new settings
             GameSettings.setCurrentMode(
                     GameMode.valueOf(props.getProperty("currentMode", "STANDARD"))
             );
@@ -32,6 +31,21 @@ public class GameSettingsManager {
             GameSettings.setRaceThreshold(
                     Integer.parseInt(props.getProperty("raceThreshold", "20"))
             );
+
+            // Load new settings
+            GameSettings.setSoundEnabled(
+                    Boolean.parseBoolean(props.getProperty("soundEnabled", "true"))
+            );
+            GameSettings.setMusicEnabled(
+                    Boolean.parseBoolean(props.getProperty("musicEnabled", "true"))
+            );
+            GameSettings.setShowGrid(
+                    Boolean.parseBoolean(props.getProperty("showGrid", "true"))
+            );
+            GameSettings.setPlayerName(
+                    props.getProperty("playerName", "Player")
+            );
+
         } catch (IOException | NumberFormatException e) {
             System.err.println("Failed to load settings: " + e.getMessage());
         }
@@ -43,10 +57,15 @@ public class GameSettingsManager {
             props.setProperty("difficultyLevel", String.valueOf(GameSettings.getDifficultyLevel()));
             props.setProperty("obstaclesEnabled", String.valueOf(GameSettings.isObstaclesEnabled()));
 
-            // Save new settings
             props.setProperty("currentMode", GameSettings.getCurrentMode().name());
             props.setProperty("selectedMapId", String.valueOf(GameSettings.getSelectedMapId()));
             props.setProperty("raceThreshold", String.valueOf(GameSettings.getRaceThreshold()));
+
+            // Save new settings
+            props.setProperty("soundEnabled", String.valueOf(GameSettings.isSoundEnabled()));
+            props.setProperty("musicEnabled", String.valueOf(GameSettings.isMusicEnabled()));
+            props.setProperty("showGrid", String.valueOf(GameSettings.isShowGrid()));
+            props.setProperty("playerName", GameSettings.getPlayerName());
 
             props.store(writer, "Game Settings");
         } catch (IOException e) {

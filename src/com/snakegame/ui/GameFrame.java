@@ -51,10 +51,11 @@ public class GameFrame extends JFrame {
     private void handleMenuAction(ActionEvent e) {
         switch (e.getActionCommand()) {
             case "play" -> {
-                // Start in whatever mode was last set (default STANDARD)
                 recreateGamePanel();
                 cardLayout.show(cardPanel, "game");
                 gamePanel.startGame();
+
+                BackgroundMusicPlayer.play("backgroundMusic.wav", true);
             }
             case "race" -> {
                 GameSettings.setCurrentMode(GameMode.RACE);
@@ -62,6 +63,8 @@ public class GameFrame extends JFrame {
                 recreateGamePanel();
                 cardLayout.show(cardPanel, "game");
                 gamePanel.startGame();
+
+                BackgroundMusicPlayer.play("backgroundMusic.wav", true);
             }
             case "mode" -> {
                 JPanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
@@ -96,6 +99,7 @@ public class GameFrame extends JFrame {
 
         // Listen for "goToMenu" again
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
+            BackgroundMusicPlayer.stop();
             cardLayout.show(cardPanel, "menu");
         });
 
