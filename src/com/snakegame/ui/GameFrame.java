@@ -29,6 +29,10 @@ public class GameFrame extends JFrame {
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             cardLayout.show(cardPanel, "menu");
         });
+        gamePanel.addPropertyChangeListener("showSettings", evt -> {
+            BackgroundMusicPlayer.stop();      // optional: stop music
+            cardLayout.show(cardPanel, "settings");
+        });
         SettingsPanel settingsPanel = new SettingsPanel(e -> cardLayout.show(cardPanel, "menu"));
         StatsPanel statsPanel = new StatsPanel(e -> cardLayout.show(cardPanel, "menu"));
 
@@ -101,6 +105,12 @@ public class GameFrame extends JFrame {
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             BackgroundMusicPlayer.stop();
             cardLayout.show(cardPanel, "menu");
+        });
+
+        // ALSO stop music and show settings
+        gamePanel.addPropertyChangeListener("showSettings", evt -> {
+            BackgroundMusicPlayer.stop();
+            cardLayout.show(cardPanel, "settings");
         });
 
         cardPanel.add(gamePanel, "game");

@@ -3,11 +3,13 @@ package com.snakegame.controller;
 import com.snakegame.config.GameSettings;
 import com.snakegame.model.*;
 import com.snakegame.sound.SoundPlayer;
+import com.snakegame.ui.SettingsPanel;
 import com.snakegame.util.ScoreManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.function.Consumer;
 
 public class GameController implements ActionListener, KeyListener {
 
@@ -16,14 +18,20 @@ public class GameController implements ActionListener, KeyListener {
     private final Runnable repaintCallback;
     private final Runnable restartCallback;
     private final Runnable goToMainMenuCallback;
+    private final Runnable settingsCallback;
     private boolean paused = false;
     private boolean inputLocked = false;
 
-    public GameController(GameState gameState, Runnable repaintCallback, Runnable restartCallback, Runnable goToMainMenuCallback) {
+    public GameController(GameState gameState,
+                          Runnable repaintCallback,
+                          Runnable restartCallback,
+                          Runnable goToMainMenuCallback,
+                          Runnable settingsCallback) {
         this.gameState = gameState;
         this.repaintCallback = repaintCallback;
         this.restartCallback = restartCallback;
         this.goToMainMenuCallback = goToMainMenuCallback;
+        this.settingsCallback = settingsCallback;
         this.timer = new Timer(GameSettings.getSpeedDelayFromDifficultyLevel(), this);
     }
 
@@ -31,18 +39,110 @@ public class GameController implements ActionListener, KeyListener {
         timer.start();
     }
 
-    private void pauseGame(Component parentComponent) {
+    private void pauseGame(Component parent) {
         paused = true;
         timer.stop();
+        showPauseDialog(parent);
+    }
 
-        int choice = showPauseMenu(parentComponent);
+    private void showPauseDialog(Component parent) {
+        JDialog dialog = new JDialog(
+                SwingUtilities.getWindowAncestor(parent),
+                "Game Paused",
+                Dialog.ModalityType.APPLICATION_MODAL
+        );
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.DARK_GRAY);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(20,20,20,20));
 
-        switch (choice) {
-            case 0 -> resumeGame();
-            case 1 -> handleRestartFromPause();     // 🔁 Restart
-            case 2 -> handleBackToMenuFromPause();  // 🏠 Back to Menu
-            case 3 -> handleExitFromPause();        // ❌ Exit
+        JLabel title = new JLabel("⏸ PAUSED");
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel scoreLabel = new JLabel("Score: " + gameState.getScore());
+        scoreLabel.setForeground(Color.YELLOW);
+        scoreLabel.setFont(new Font("Consolas", Font.PLAIN, 18));
+        scoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(scoreLabel);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Helper to create each button
+        Consumer<JButton> styleButton = btn -> {
+            btn.setMaximumSize(new Dimension(200, 40));
+            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setFocusPainted(false);
+        };
+
+        JButton resume = new JButton("▶ Resume");
+        styleButton.accept(resume);
+        resume.addActionListener(e -> {
+            dialog.dispose();
+            resumeGame();
+        });
+
+        JButton settings = new JButton("⚙ Settings");
+        styleButton.accept(settings);
+        settings.addActionListener(e -> {
+            dialog.dispose();
+            showInGameSettings(parent);
+        });
+
+        JButton restart = new JButton("🔄 Restart");
+        styleButton.accept(restart);
+        restart.addActionListener(e -> {
+            dialog.dispose();
+            handleRestartFromPause();
+        });
+
+        JButton menu = new JButton("🏠 Main Menu");
+        styleButton.accept(menu);
+        menu.addActionListener(e -> {
+            dialog.dispose();
+            handleBackToMenuFromPause();
+        });
+
+        JButton exit = new JButton("❌ Exit");
+        styleButton.accept(exit);
+        exit.addActionListener(e -> {
+            dialog.dispose();
+            handleExitFromPause();
+        });
+
+        // Add buttons with spacing
+        for (JButton b : new JButton[]{resume, settings, restart, menu, exit}) {
+            panel.add(b);
+            panel.add(Box.createVerticalStrut(10));
         }
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(parent);
+        dialog.setVisible(true);
+    }
+
+     /**
+     +     * Show SettingsPanel modally during a pause.
+     +     * Back → re-open pause dialog.
+     +     **/
+    private void showInGameSettings(Component parent) {
+        JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(parent),
+                "Settings",
+                Dialog.ModalityType.APPLICATION_MODAL
+                );
+        // Pass Back = reopen the pause menu
+        SettingsPanel panel = new SettingsPanel(e -> {
+            dlg.dispose();
+            pauseGame(parent);
+        });
+        dlg.getContentPane().add(panel);
+        dlg.pack();
+        dlg.setLocationRelativeTo(parent);
+        dlg.setVisible(true);
     }
 
     private void handleRestartFromPause() {
@@ -156,31 +256,75 @@ public class GameController implements ActionListener, KeyListener {
         );
     }
 
-
     private void showGameOverMenu() {
         timer.stop();
         SoundPlayer.play("game_over.wav");
         if (gameState.getScore() > 0) {
             ScoreManager.addScore(gameState.getScore());
         }
+        showGameOverDialog();
+    }
 
-        String[] options = {"Restart", "Back to Menu", "Exit"};
-        int choice = JOptionPane.showOptionDialog(
-                null,
+    private void showGameOverDialog() {
+        JDialog dialog = new JDialog(
+                (Frame) null,
                 "Game Over",
-                "Game Over",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                options,
-                options[0]
+                Dialog.ModalityType.APPLICATION_MODAL
         );
+        JPanel panel = new JPanel();
+        panel.setBackground(Color.BLACK);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(20,20,20,20));
 
-        switch (choice) {
-            case 0 -> restartCallback.run();
-            case 1 -> goToMainMenuCallback.run(); // ✅ NEW
-            case 2 -> System.exit(0);
+        JLabel over = new JLabel("💀 GAME OVER");
+        over.setForeground(Color.RED);
+        over.setFont(new Font("Ink Free", Font.BOLD, 28));
+        over.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel scoreLabel = new JLabel("Final Score: " + gameState.getScore());
+        scoreLabel.setForeground(Color.ORANGE);
+        scoreLabel.setFont(new Font("Consolas", Font.PLAIN, 18));
+        scoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        panel.add(over);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(scoreLabel);
+        panel.add(Box.createVerticalStrut(20));
+
+        // Buttons: Restart, Settings, Main Menu, Exit
+        JButton restart = new JButton("🔄 Restart");
+        JButton settings = new JButton("⚙ Settings");
+        JButton menu = new JButton("🏠 Main Menu");
+        JButton exit = new JButton("❌ Exit");
+        Consumer<JButton> styleButton = btn -> {
+            btn.setMaximumSize(new Dimension(200, 40));
+            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setFocusPainted(false);
+        };
+        for (JButton b : new JButton[]{restart, settings, menu, exit}) {
+            styleButton.accept(b);
+            panel.add(b);
+            panel.add(Box.createVerticalStrut(10));
         }
+
+        restart.addActionListener(e -> {
+            dialog.dispose();
+            restartCallback.run();
+        });
+        settings.addActionListener(e -> {
+            dialog.dispose();
+            settingsCallback.run();
+        });
+        menu.addActionListener(e -> {
+            dialog.dispose();
+            goToMainMenuCallback.run();
+        });
+        exit.addActionListener(e -> System.exit(0));
+
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(null);
+        dialog.setVisible(true);
     }
 
 

@@ -39,7 +39,10 @@ public class GamePanel extends JPanel {
             });
         };
 
-        this.controller = new GameController(gameState, this::repaint, restartCallback, goToMainMenuCallback);
+        Runnable settingsCallback = () ->
+                this.firePropertyChange("showSettings", false, true);
+
+        this.controller = new GameController(gameState, this::repaint, restartCallback, goToMainMenuCallback, settingsCallback);
         this.addKeyListener(controller);
     }
 
@@ -51,8 +54,11 @@ public class GamePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        drawGrid(g);
-        drawGame(g);
+        // Only draw the grid if the user has it enabled in Settings
+        if (com.snakegame.config.GameSettings.isShowGrid()) {
+            drawGrid(g);
+        }
+        drawGame(g);;
     }
 
     private void drawGrid(Graphics g) {

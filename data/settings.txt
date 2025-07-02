@@ -1,11 +1,11 @@
 #Game Settings
-#Mon Jun 30 12:59:44 MST 2025
+#Tue Jul 01 09:56:11 MST 2025
 currentMode=MAP_SELECT
 difficultyLevel=20
-musicEnabled=true
+musicEnabled=false
 obstaclesEnabled=false
-playerName=Player
+playerName=Cutter
 raceThreshold=20
-selectedMapId=4
-showGrid=false
-soundEnabled=false
+selectedMapId=2
+showGrid=true
+soundEnabled=true
