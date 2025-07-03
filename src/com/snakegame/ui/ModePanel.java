@@ -2,27 +2,37 @@ package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapManager;
 import com.snakegame.util.ProgressManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * Map selection panel that uses only the in-memory map list.
+ */
 public class ModePanel extends JPanel {
     private int selectedMap;
-    private final Map<Integer, JToggleButton> mapButtons = new HashMap<>();
+    private final JPanel grid;
+    private final ButtonGroup group;
+    private final Map<Integer, JToggleButton> mapButtons;
 
     public ModePanel(Runnable goBack) {
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
 
-        // Determine initial selection: 0 = Basic Map, >0 = selected map
-        if (GameSettings.getCurrentMode() == GameMode.STANDARD) {
-            selectedMap = 0;
-        } else {
-            selectedMap = GameSettings.getSelectedMapId();
+        // If dev mode just turned on, load any dev maps into memory
+        if (GameSettings.isDeveloperModeEnabled()) {
+            MapManager.loadDeveloperMaps();
         }
+
+        // Determine initial selection
+        selectedMap = (GameSettings.getCurrentMode() == GameMode.STANDARD)
+                ? 0
+                : GameSettings.getSelectedMapId();
 
         // Title
         JLabel title = new JLabel("🗺 Select Map", SwingConstants.CENTER);
@@ -31,57 +41,26 @@ public class ModePanel extends JPanel {
         title.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         add(title, BorderLayout.NORTH);
 
-        // Grid of toggle buttons: Basic + maps
-        JPanel grid = new JPanel(new GridLayout(0, 5, 10, 10));
+        // Grid container
+        grid = new JPanel(new GridLayout(0, 5, 10, 10));
         grid.setBackground(Color.BLACK);
-        ButtonGroup group = new ButtonGroup();
+        group = new ButtonGroup();
+        mapButtons = new HashMap<>();
 
-        // Basic Map option
-        JToggleButton basicBtn = new JToggleButton("Basic Map");
-        basicBtn.setFont(new Font("Arial", Font.PLAIN, 16));
-        basicBtn.setForeground(Color.WHITE);
-        basicBtn.setBackground(Color.DARK_GRAY);
-        basicBtn.setFocusPainted(false);
-        basicBtn.addActionListener(e -> selectedMap = 0);
-        group.add(basicBtn);
-        mapButtons.put(0, basicBtn);
-        grid.add(basicBtn);
-
-        // File-based maps
-        for (int i = 1; i <= 10; i++) {
-            JToggleButton btn = new JToggleButton("Map " + i);
-            btn.setFont(new Font("Arial", Font.PLAIN, 16));
-            btn.setForeground(Color.WHITE);
-            btn.setBackground(Color.DARK_GRAY);
-            btn.setFocusPainted(false);
-
-            boolean unlocked = ProgressManager.isMapUnlocked(i);
-            btn.setEnabled(unlocked);
-            if (!unlocked) {
-                btn.setText("🔒 Map " + i);
-            }
-
-            final int mapId = i;
-            btn.addActionListener(e -> selectedMap = mapId);
-            group.add(btn);
-            mapButtons.put(i, btn);
-            grid.add(btn);
-        }
+        // Populate buttons from memory
+        loadButtons();
         add(grid, BorderLayout.CENTER);
 
-        // Preselect the initial button
-        JToggleButton initial = mapButtons.get(selectedMap);
-        if (initial != null) {
-            initial.setSelected(true);
-        }
+        // Pre-select current map
+        JToggleButton init = mapButtons.get(selectedMap);
+        if (init != null) init.setSelected(true);
 
-        // Bottom panel: Save and Back
+        // Bottom save/back
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         bottom.setBackground(Color.BLACK);
-
-        JButton saveButton = new JButton("✔ Save");
-        saveButton.setFont(new Font("Arial", Font.BOLD, 16));
-        saveButton.addActionListener(e -> {
+        JButton save = new JButton("✔ Save");
+        save.setFont(new Font("Arial", Font.BOLD, 16));
+        save.addActionListener(e -> {
             if (selectedMap == 0) {
                 GameSettings.setCurrentMode(GameMode.STANDARD);
             } else {
@@ -90,13 +69,51 @@ public class ModePanel extends JPanel {
             }
             goBack.run();
         });
-
-        JButton backButton = new JButton("← Back");
-        backButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        backButton.addActionListener(e -> goBack.run());
-
-        bottom.add(saveButton);
-        bottom.add(backButton);
+        JButton back = new JButton("← Back");
+        back.setFont(new Font("Arial", Font.PLAIN, 14));
+        back.addActionListener(e -> goBack.run());
+        bottom.add(save);
+        bottom.add(back);
         add(bottom, BorderLayout.SOUTH);
+    }
+
+    private void loadButtons() {
+        grid.removeAll();
+        group.clearSelection();
+        mapButtons.clear();
+
+        // Basic map
+        JToggleButton basic = new JToggleButton("Basic Map");
+        styleButton(basic);
+        basic.addActionListener(e -> selectedMap = 0);
+        group.add(basic); mapButtons.put(0, basic); grid.add(basic);
+
+        // Dynamic maps from memory
+        List<Integer> ids = MapManager.getMapIds();
+        for (int id : ids) {
+            JToggleButton btn = new JToggleButton("Map " + id);
+            styleButton(btn);
+            boolean unlocked = GameSettings.isDeveloperModeEnabled()
+                    || ProgressManager.isMapUnlocked(id);
+            if (!unlocked) {
+                btn.setText("🔒 Map " + id);
+                btn.setEnabled(false);
+            }
+            final int m = id;
+            btn.addActionListener(e -> selectedMap = m);
+            group.add(btn);
+            mapButtons.put(id, btn);
+            grid.add(btn);
+        }
+
+        grid.revalidate();
+        grid.repaint();
+    }
+
+    private void styleButton(AbstractButton b) {
+        b.setFont(new Font("Arial", Font.PLAIN, 16));
+        b.setForeground(Color.WHITE);
+        b.setBackground(Color.DARK_GRAY);
+        b.setFocusPainted(false);
     }
 }

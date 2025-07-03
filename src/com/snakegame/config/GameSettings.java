@@ -41,6 +41,10 @@ public class GameSettings {
     public static Difficulty getDifficulty() { return difficulty; }
     public static void setDifficulty(Difficulty d) { difficulty = d; GameSettingsManager.save(); }
 
+    // Developer mode
+
+    private static boolean developerModeEnabled = false;
+
     public static int getDifficultyLevel() { return difficultyLevel; }
     public static void setDifficultyLevel(int level) {
         difficultyLevel = Math.max(0, Math.min(50, level));
@@ -135,6 +139,14 @@ public class GameSettings {
     public static void setMovingObstaclesAutoIncrement(boolean auto) {
         movingObstaclesAutoIncrement = auto;
         GameSettingsManager.save();
+    }
+
+    public static boolean isDeveloperModeEnabled() {
+        return developerModeEnabled;
+    }
+
+    public static void setDeveloperModeEnabled(boolean enabled) {
+        developerModeEnabled = enabled;
     }
 
 }

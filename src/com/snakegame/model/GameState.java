@@ -138,13 +138,27 @@ public class GameState {
         updateEffects();
         updateNotifications();
 
+        // 1) Move moving obstacles and check collision with snake head
         if (GameSettings.isMovingObstaclesEnabled()) {
             movingObstacles.forEach(MovingObstacle::update);
+            if (headHitsMovingObstacle(snake.getHead())) {
+                running = false;
+                return;
+            }
         }
+
+        // 2) Move snake (handles eating)
 
         boolean ateApple = snake.getHead().equals(apple.getPosition());
         AppleType type = apple.getType();
         snake.move(ateApple);
+
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            if (headHitsMovingObstacle(snake.getHead())) {
+                running = false;
+                return;
+            }
+        }
 
         Set<Point> forbidden = new HashSet<>(snake.getBody());
         forbidden.addAll(obstacles);
@@ -198,6 +212,16 @@ public class GameState {
 
         checkCollision();
     }
+
+    private boolean headHitsMovingObstacle(Point head) {
+        for (MovingObstacle mo : movingObstacles) {
+            for (Point seg : mo.getSegments()) {
+                if (seg.equals(head)) return true;
+            }
+        }
+        return false;
+    }
+
 
     private MovingObstacle createSafeMovingObstacle(Rectangle playArea, Point head) {
         MovingObstacle mo;

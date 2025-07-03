@@ -67,6 +67,7 @@ public class GameFrame extends JFrame {
         this.setIconImage(icon.getImage());
         this.setVisible(true);
         gamePanel.requestFocusInWindow();
+
     }
 
     private void handleMenuAction(ActionEvent e) {
@@ -88,7 +89,7 @@ public class GameFrame extends JFrame {
                 BackgroundMusicPlayer.play("backgroundMusic.wav", true);
             }
             case "mode" -> {
-                JPanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
+                ModePanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("mode", modePanel);
                 cardLayout.show(cardPanel, "mode");
             }
@@ -118,6 +119,11 @@ public class GameFrame extends JFrame {
                     if (choice == JOptionPane.YES_OPTION) {
                     System.exit(0);
                 }
+            }
+            case "developer" -> {
+                MapEditorPanel editor = new MapEditorPanel(() -> cardLayout.show(cardPanel, "menu"));
+                cardPanel.add(editor, "mapEditor");
+                cardLayout.show(cardPanel, "mapEditor");
             }
 
         }

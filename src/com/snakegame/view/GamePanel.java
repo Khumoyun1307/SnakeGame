@@ -155,11 +155,17 @@ public class GamePanel extends JPanel {
         // Draw moving obstacles
 
         if (GameSettings.isMovingObstaclesEnabled()) {
-            g.setColor(new Color(128, 128, 128, 180));
+            // Use theme-based color for moving obstacles (semi-transparent)
+            Color moColor = new Color(obstacleColor.getRed(),
+                    obstacleColor.getGreen(),
+                    obstacleColor.getBlue(),
+                    180);
+            g.setColor(moColor);
             for (MovingObstacle mo : gameState.getMovingObstacles()) {
                 for (Point p : mo.getSegments()) {
                     g.fillRect(p.x, p.y,
-                            GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
+                            GameConfig.UNIT_SIZE,
+                            GameConfig.UNIT_SIZE);
                 }
             }
         }
