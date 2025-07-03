@@ -4,12 +4,17 @@ import com.snakegame.config.GameSettings;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import com.snakegame.sound.BackgroundMusicPlayer;
 
 public class SettingsPanel extends JPanel {
     private final JCheckBox soundCheck;
     private final JCheckBox musicCheck;
     private final JCheckBox gridCheck;
     private final JTextField nameField;
+    private final JComboBox<GameSettings.Theme> themeCombo;
+
+    boolean wasMusicOn = GameSettings.isMusicEnabled();
+    boolean wasSoundOn = GameSettings.isSoundEnabled();
 
     public SettingsPanel(ActionListener onBack) {
         setLayout(new BorderLayout());
@@ -53,17 +58,30 @@ public class SettingsPanel extends JPanel {
         gridCheck.setBackground(Color.DARK_GRAY);
         gridCheck.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Theme menu
+
+        themeCombo = new JComboBox<>(GameSettings.Theme.values());
+        themeCombo.setSelectedItem(GameSettings.getSelectedTheme());
+        themeCombo.setMaximumSize(new Dimension(200, 25));
+        themeCombo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        content.add(Box.createVerticalStrut(15));
+        JLabel themeLabel = new JLabel("Theme:");
+        themeLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        themeLabel.setForeground(Color.WHITE);
+        themeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        content.add(themeLabel);
+
+        content.add(Box.createVerticalStrut(15));
+
+        content.add(themeCombo);
+        content.add(Box.createVerticalStrut(10));
+
+
         // Buttons
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.setBackground(Color.DARK_GRAY);
-        JButton save = new JButton("✔ Save");
-        save.addActionListener(e -> {
-            GameSettings.setPlayerName(nameField.getText().trim());
-            GameSettings.setSoundEnabled(soundCheck.isSelected());
-            GameSettings.setMusicEnabled(musicCheck.isSelected());
-            GameSettings.setShowGrid(gridCheck.isSelected());
-            JOptionPane.showMessageDialog(this, "Settings saved!");
-        });
+        JButton save = getSaveJButton();
 
         JButton back = new JButton("← Back");
         back.addActionListener(onBack);
@@ -83,5 +101,27 @@ public class SettingsPanel extends JPanel {
         content.add(buttonPanel);
 
         add(content, BorderLayout.CENTER);
+    }
+
+    private JButton getSaveJButton() {
+        JButton save = new JButton("✔ Save");
+        save.addActionListener(e -> {
+            GameSettings.setPlayerName(nameField.getText().trim());
+            GameSettings.setSoundEnabled(soundCheck.isSelected());
+            GameSettings.setMusicEnabled(musicCheck.isSelected());
+            GameSettings.setShowGrid(gridCheck.isSelected());
+            GameSettings.setSelectedTheme((GameSettings.Theme)themeCombo.getSelectedItem());
+
+            boolean nowMusicOn = musicCheck.isSelected();
+            if (wasMusicOn != nowMusicOn) {
+                if (nowMusicOn) {
+                    BackgroundMusicPlayer.play("backgroundMusic.wav", true);
+                } else {
+                    BackgroundMusicPlayer.stop();
+                    }
+                }
+            JOptionPane.showMessageDialog(this, "Settings saved!");
+        });
+        return save;
     }
 }

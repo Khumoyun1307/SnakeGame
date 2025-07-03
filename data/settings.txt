@@ -1,11 +1,15 @@
 #Game Settings
-#Tue Jul 01 09:56:11 MST 2025
-currentMode=MAP_SELECT
-difficultyLevel=20
+#Thu Jul 03 10:41:30 MST 2025
+currentMode=STANDARD
+difficultyLevel=27
+movingObstacleCount=0
+movingObstaclesAutoIncrement=true
+movingObstaclesEnabled=true
 musicEnabled=false
 obstaclesEnabled=false
 playerName=Cutter
 raceThreshold=20
-selectedMapId=2
+selectedMapId=5
 showGrid=true
-soundEnabled=true
+soundEnabled=false
+theme=PIXEL_ART

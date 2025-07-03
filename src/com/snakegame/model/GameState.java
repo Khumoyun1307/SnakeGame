@@ -7,8 +7,9 @@ import com.snakegame.mode.MapManager;
 import com.snakegame.sound.SoundPlayer;
 import com.snakegame.util.ProgressManager;
 
-import java.awt.Point;
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 public class GameState {
     private Snake snake;
@@ -33,6 +34,9 @@ public class GameState {
     private long unlockMessageEndTime = 0;
     private static final long UNLOCK_MSG_DURATION_MS = 3000;
 
+    private final List<MovingObstacle> movingObstacles = new ArrayList<>();
+    private final Random rand = new Random();
+
     public GameState() {
         initGame();
     }
@@ -40,11 +44,22 @@ public class GameState {
     private void initGame() {
         // Configure obstacles
         obstacles.clear();
+        movingObstacles.clear();
+
         GameMode mode = GameSettings.getCurrentMode();
         if (mode == GameMode.STANDARD) {
             if (GameSettings.isObstaclesEnabled()) {
                 generateObstacles(15);
             }
+            if (GameSettings.isMovingObstaclesEnabled()) {
+                int count = GameSettings.getMovingObstacleCount();
+                Rectangle playArea = new Rectangle(0, 0,
+                        GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT);
+                for (int i = 0; i < count; i++) {
+                    movingObstacles.add(createRandomMovingObstacle(playArea));
+                }
+            }
+
         } else {
             int mapId = GameSettings.getSelectedMapId();
             MapConfig cfg = MapManager.getMap(mapId);
@@ -57,6 +72,20 @@ public class GameState {
 
         // Reset snake and apple for new map
         resetSnakeAndApple();
+    }
+
+    private MovingObstacle createRandomMovingObstacle(Rectangle playArea) {
+        int lenRange = GameConfig.MAX_MOVING_OBSTACLE_LENGTH - GameConfig.MIN_MOVING_OBSTACLE_LENGTH + 1;
+        int length = GameConfig.MIN_MOVING_OBSTACLE_LENGTH + rand.nextInt(lenRange);
+        boolean vertical = rand.nextBoolean();
+        int cellsX = playArea.width / GameConfig.UNIT_SIZE - (vertical ? 1 : length);
+        int cellsY = playArea.height / GameConfig.UNIT_SIZE - (vertical ? length : 1);
+        int startX = rand.nextInt(cellsX) * GameConfig.UNIT_SIZE;
+        int startY = rand.nextInt(cellsY) * GameConfig.UNIT_SIZE;
+        return new MovingObstacle(
+                new Point(startX, startY), length, vertical,
+                GameConfig.MOVING_OBSTACLE_SPEED, playArea
+        );
     }
 
     private void generateObstacles(int count) {
@@ -91,6 +120,9 @@ public class GameState {
         // Spawn apple avoiding obstacles and snake body
         Set<Point> forbidden = new HashSet<>(snake.getBody());
         forbidden.addAll(obstacles);
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            movingObstacles.forEach(mo -> forbidden.addAll(mo.getSegments()));
+        }
         apple = new Apple(forbidden);
 
         // Reset effects and apple count for new map
@@ -105,6 +137,10 @@ public class GameState {
 
         updateEffects();
         updateNotifications();
+
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            movingObstacles.forEach(MovingObstacle::update);
+        }
 
         boolean ateApple = snake.getHead().equals(apple.getPosition());
         AppleType type = apple.getType();
@@ -121,6 +157,19 @@ public class GameState {
             score += doubleScoreActive ? baseScore * 2 : baseScore;
 
             applyAppleEffect(type);
+
+            // === AUTO-INCREMENT LOGIC ===
+            if (GameSettings.isMovingObstaclesEnabled()
+                    && GameSettings.isMovingObstaclesAutoIncrement()
+                    && movingObstacles.size() < GameConfig.MAX_MOVING_OBSTACLE_COUNT
+                    && applesEaten % GameConfig.MOVING_OBSTACLE_INCREMENT_APPLES == 0) {
+
+                // spawn one new obstacle, safely away from the snake head
+                Rectangle playArea = new Rectangle(0, 0,
+                        GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT);
+                movingObstacles.add(createSafeMovingObstacle(playArea, snake.getHead()));
+            }
+            // === END AUTO-INCREMENT ===
 
             // Race mode transition
             if (GameSettings.getCurrentMode() == GameMode.RACE
@@ -148,6 +197,17 @@ public class GameState {
         }
 
         checkCollision();
+    }
+
+    private MovingObstacle createSafeMovingObstacle(Rectangle playArea, Point head) {
+        MovingObstacle mo;
+        do {
+            mo = createRandomMovingObstacle(playArea);
+        } while (mo.getSegments().stream().anyMatch(seg ->
+                Math.abs(seg.x - head.x) < GameConfig.UNIT_SIZE * 5
+                        && Math.abs(seg.y - head.y) < GameConfig.UNIT_SIZE * 5
+        ));
+        return mo;
     }
 
     private void applyAppleEffect(AppleType type) {
@@ -197,6 +257,15 @@ public class GameState {
         if (snake.isSelfColliding()) running = false;
         // Obstacle collision
         if (obstacles.contains(head)) running = false;
+
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            for (MovingObstacle mo : movingObstacles) {
+                if (mo.getSegments().contains(head)) {
+                    running = false;
+                    return;
+                }
+            }
+        }
     }
 
     // Getters
@@ -212,7 +281,9 @@ public class GameState {
     public List<Point> getObstacles() { return obstacles; }
     /** Returns current unlock notification or null */
     public String getUnlockMessage() { return unlockMessage; }
-
+    public List<MovingObstacle> getMovingObstacles() {
+        return movingObstacles;
+    }
     public void setDirection(Direction direction) {
         snake.setDirection(direction);
     }

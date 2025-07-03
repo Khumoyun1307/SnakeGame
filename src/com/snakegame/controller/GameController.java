@@ -51,6 +51,7 @@ public class GameController implements ActionListener, KeyListener {
                 "Game Paused",
                 Dialog.ModalityType.APPLICATION_MODAL
         );
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         JPanel panel = new JPanel();
         panel.setBackground(Color.DARK_GRAY);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -193,25 +194,30 @@ public class GameController implements ActionListener, KeyListener {
     }
 
     private void handleExitFromPause() {
-        int choice = JOptionPane.showConfirmDialog(
-                null,
-                "Do you want to save your score before exiting?",
-                "Save Score?",
-                JOptionPane.YES_NO_CANCEL_OPTION,
+        // 1) Save-score prompt
+        int saveChoice = JOptionPane.showConfirmDialog(
+            null,
+            "Do you want to save your score before exiting?",
+            "Save Score?",
+            JOptionPane.YES_NO_CANCEL_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        if (saveChoice == JOptionPane.CANCEL_OPTION || saveChoice == JOptionPane.CLOSED_OPTION) {
+            return;
+        }
+        if (saveChoice == JOptionPane.YES_OPTION && gameState.getScore() > 0) {
+            ScoreManager.addScore(gameState.getScore());
+        }
+        // 2) Confirm-exit prompt
+        int exitConfirm = JOptionPane.showConfirmDialog(
+            null,
+            "Are you sure you want to quit?",
+                "Confirm Exit",
+            JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
         );
-
-        switch (choice) {
-            case JOptionPane.YES_OPTION -> {
-                if (gameState.getScore() > 0) {
-                    ScoreManager.addScore(gameState.getScore());
-                }
-                System.exit(0);
-            }
-            case JOptionPane.NO_OPTION -> System.exit(0);
-            case JOptionPane.CANCEL_OPTION, JOptionPane.CLOSED_OPTION -> {
-                // Do nothing
-            }
+        if (exitConfirm == JOptionPane.YES_OPTION) {
+            System.exit(0);
         }
     }
 
@@ -271,6 +277,7 @@ public class GameController implements ActionListener, KeyListener {
                 "Game Over",
                 Dialog.ModalityType.APPLICATION_MODAL
         );
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
         JPanel panel = new JPanel();
         panel.setBackground(Color.BLACK);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -319,7 +326,21 @@ public class GameController implements ActionListener, KeyListener {
             dialog.dispose();
             goToMainMenuCallback.run();
         });
-        exit.addActionListener(e -> System.exit(0));
+        exit.addActionListener(e -> {
+            dialog.dispose();
+            int choice = JOptionPane.showConfirmDialog(
+                null,
+                "Are you sure you want to quit?",
+                "Confirm Exit",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            if (choice == JOptionPane.YES_OPTION) {
+                System.exit(0);
+            } else {
+                showGameOverMenu();
+            }
+        });
 
         dialog.add(panel);
         dialog.pack();

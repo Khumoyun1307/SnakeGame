@@ -7,6 +7,8 @@ import com.snakegame.view.GamePanel;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class GameFrame extends JFrame {
 
@@ -17,7 +19,22 @@ public class GameFrame extends JFrame {
 
     public GameFrame() {
         this.setTitle("Snake");
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                int choice = JOptionPane.showConfirmDialog(
+                GameFrame.this,
+                            "Are you sure you want to quit the game?",
+                            "Confirm Exit",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.QUESTION_MESSAGE
+                );
+                if (choice == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+        });
         this.setResizable(false);
 
         cardLayout = new CardLayout();
@@ -90,7 +107,19 @@ public class GameFrame extends JFrame {
                 replaceCard("stats", statsPanel);
                 cardLayout.show(cardPanel, "stats");
             }
-            case "exit" -> System.exit(0);
+            case "exit" -> {
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        "Are you sure you want to quit the game?",
+                        "Confirm Exit",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE
+                    );
+                    if (choice == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+
         }
     }
 

@@ -21,4 +21,13 @@ public class GameConfig {
     public static final int BIG_VISIBLE_DURATION_MS = 6000;
     public static final int GOLDEN_VISIBLE_DURATION_MS = 10000;
     public static final int SLOWDOWN_VISIBLE_DURATION_MS = 10000;
+
+    // Moving obstacles
+
+    public static final int MAX_MOVING_OBSTACLE_COUNT = 10;      // absolute cap
+    public static final int DEFAULT_MOVING_OBSTACLE_COUNT = 5;   // starting default
+    public static final int MIN_MOVING_OBSTACLE_LENGTH = 1;      // in units
+    public static final int MAX_MOVING_OBSTACLE_LENGTH = 7;      // in units
+    public static final int MOVING_OBSTACLE_SPEED = UNIT_SIZE;   // pixels per tick
+    public static final int MOVING_OBSTACLE_INCREMENT_APPLES = 10;
 }

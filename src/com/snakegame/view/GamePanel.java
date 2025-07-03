@@ -1,5 +1,6 @@
 package com.snakegame.view;
 
+import com.snakegame.config.GameSettings;
 import com.snakegame.controller.GameController;
 import com.snakegame.model.*;
 import com.snakegame.util.ScoreManager;
@@ -58,7 +59,7 @@ public class GamePanel extends JPanel {
         if (com.snakegame.config.GameSettings.isShowGrid()) {
             drawGrid(g);
         }
-        drawGame(g);;
+        drawGame(g);
     }
 
     private void drawGrid(Graphics g) {
@@ -70,6 +71,27 @@ public class GamePanel extends JPanel {
     }
 
     private void drawGame(Graphics g) {
+
+        GameSettings.Theme theme = GameSettings.getSelectedTheme();
+        Color snakeHeadColor, snakeBodyColor, obstacleColor, appleColor;
+
+        switch (theme) {
+            case NEON:
+                snakeHeadColor = Color.MAGENTA;
+                snakeBodyColor = Color.CYAN;
+                obstacleColor = Color.PINK;
+                break;
+            case PIXEL_ART:
+                snakeHeadColor = new Color(0, 255, 255);
+                snakeBodyColor = new Color(0, 128, 128);
+                obstacleColor  = new Color(128, 128, 0);
+                break;
+            default: // RETRO
+                snakeHeadColor = Color.GREEN;
+                snakeBodyColor = new Color(45, 180, 0);
+                obstacleColor = Color.GRAY;
+        }
+
         // New: show unlock notification if present
         String unlockMsg = gameState.getUnlockMessage();
         if (unlockMsg != null) {
@@ -130,11 +152,30 @@ public class GamePanel extends JPanel {
             g.drawRect(obs.x, obs.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
         }
 
+        // Draw moving obstacles
+
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            g.setColor(new Color(128, 128, 128, 180));
+            for (MovingObstacle mo : gameState.getMovingObstacles()) {
+                for (Point p : mo.getSegments()) {
+                    g.fillRect(p.x, p.y,
+                            GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
+                }
+            }
+        }
+
         // Draw snake
         int index = 0;
         for (Point p : gameState.getSnake().getBody()) {
-            g.setColor(index++ == 0 ? Color.GREEN : new Color(45, 180, 0));
+            g.setColor(index++ == 0 ? snakeHeadColor : snakeBodyColor);
             g.fillOval(p.x, p.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
+        }
+
+        for (Point obs : gameState.getObstacles()) {
+            g.setColor(obstacleColor);
+            g.fillRect(obs.x, obs.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
+            g.setColor(obstacleColor.darker());
+            g.drawRect(obs.x, obs.y, GameConfig.UNIT_SIZE, GameConfig.UNIT_SIZE);
         }
 
         // Status overlays

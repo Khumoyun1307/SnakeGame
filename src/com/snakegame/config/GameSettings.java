@@ -1,14 +1,22 @@
 package com.snakegame.config;
 
 import com.snakegame.mode.GameMode;
+import com.snakegame.model.GameConfig;
 
 public class GameSettings {
     public enum Difficulty { EASY, NORMAL, HARD, EXPERT, INSANE }
+    public enum Theme {
+        RETRO,   // classic green snake on black
+        NEON,    // bright neon colors
+        PIXEL_ART // blocky pixel art look
+    }
 
     private static final int BEGINNER_DELAY = 180;
     private static final double DIFFICULTY_CONVERSION_MULTIPLIER = 2.4;
 
     private static Difficulty difficulty = Difficulty.NORMAL;
+    private static Theme selectedTheme = Theme.RETRO;
+
     private static boolean obstaclesEnabled = false;
     private static int difficultyLevel = 20;
 
@@ -22,6 +30,12 @@ public class GameSettings {
     private static boolean musicEnabled = true;
     private static boolean showGrid = true;
     private static String playerName = "Player";
+
+    // Moving obstacle settings
+
+    private static boolean movingObstaclesEnabled = false;
+    private static int movingObstacleCount = GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT;
+    private static boolean movingObstaclesAutoIncrement = false;
 
     // Difficulty
     public static Difficulty getDifficulty() { return difficulty; }
@@ -88,4 +102,39 @@ public class GameSettings {
     public static int getSpeedDelayFromDifficultyLevel() {
         return (int) (BEGINNER_DELAY - (difficultyLevel * DIFFICULTY_CONVERSION_MULTIPLIER));
     }
+
+    public static Theme getSelectedTheme() {
+        return selectedTheme;
+    }
+
+    public static void setSelectedTheme(Theme theme) {
+        selectedTheme = theme;
+        GameSettingsManager.save();
+    }
+
+    public static boolean isMovingObstaclesEnabled() {
+        return movingObstaclesEnabled;
+    }
+    public static void setMovingObstaclesEnabled(boolean enabled) {
+        movingObstaclesEnabled = enabled;
+        GameSettingsManager.save();
+    }
+
+    public static int getMovingObstacleCount() {
+        return movingObstacleCount;
+    }
+    public static void setMovingObstacleCount(int count) {
+        // clamp between 0 and GameConfig.MOVING_OBSTACLE_COUNT
+        movingObstacleCount = Math.max(0, Math.min(GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT, count));
+        GameSettingsManager.save();
+    }
+
+    public static boolean isMovingObstaclesAutoIncrement() {
+        return movingObstaclesAutoIncrement;
+    }
+    public static void setMovingObstaclesAutoIncrement(boolean auto) {
+        movingObstaclesAutoIncrement = auto;
+        GameSettingsManager.save();
+    }
+
 }

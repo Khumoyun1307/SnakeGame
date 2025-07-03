@@ -3,6 +3,7 @@ package com.snakegame.config;
 import java.io.*;
 import java.util.Properties;
 import com.snakegame.mode.GameMode;
+import com.snakegame.model.GameConfig;
 
 public class GameSettingsManager {
     private static final String FILE_PATH = "data/settings.txt";
@@ -46,6 +47,26 @@ public class GameSettingsManager {
                     props.getProperty("playerName", "Player")
             );
 
+            try {
+                GameSettings.setSelectedTheme(
+                        GameSettings.Theme.valueOf(props.getProperty("theme", "RETRO"))
+                );
+            } catch (IllegalArgumentException e) {
+                GameSettings.setSelectedTheme(GameSettings.Theme.RETRO);
+            }
+
+            GameSettings.setMovingObstaclesEnabled(
+                    Boolean.parseBoolean(props.getProperty("movingObstaclesEnabled", "false"))
+            );
+            GameSettings.setMovingObstacleCount(
+                    Integer.parseInt(props.getProperty("movingObstacleCount",
+                            String.valueOf(GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT)))
+            );
+            GameSettings.setMovingObstaclesAutoIncrement(
+                    Boolean.parseBoolean(props.getProperty("movingObstaclesAutoIncrement", "false"))
+            );
+
+
         } catch (IOException | NumberFormatException e) {
             System.err.println("Failed to load settings: " + e.getMessage());
         }
@@ -66,7 +87,13 @@ public class GameSettingsManager {
             props.setProperty("musicEnabled", String.valueOf(GameSettings.isMusicEnabled()));
             props.setProperty("showGrid", String.valueOf(GameSettings.isShowGrid()));
             props.setProperty("playerName", GameSettings.getPlayerName());
-
+            props.setProperty("theme", GameSettings.getSelectedTheme().name());
+            props.setProperty("movingObstaclesEnabled",
+                    String.valueOf(GameSettings.isMovingObstaclesEnabled()));
+            props.setProperty("movingObstacleCount",
+                    String.valueOf(GameSettings.getMovingObstacleCount()));
+            props.setProperty("movingObstaclesAutoIncrement",
+                    String.valueOf(GameSettings.isMovingObstaclesAutoIncrement()));
             props.store(writer, "Game Settings");
         } catch (IOException e) {
             System.err.println("Failed to save settings: " + e.getMessage());

@@ -1,6 +1,7 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.model.GameConfig;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,6 +21,11 @@ public class DifficultyPanel extends JPanel {
 
     private final JSlider speedSlider;
     private final JLabel speedLabel;
+
+    private final JCheckBox obstacleCheckbox;
+    private final JCheckBox movingObsCheckbox;
+    private final JSpinner movingObsCountSpinner;
+    private final JCheckBox movingObsAutoIncrement;
 
     public DifficultyPanel(Runnable goBack) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -53,17 +59,48 @@ public class DifficultyPanel extends JPanel {
             updateSpeedLabel(speedSlider.getValue());
         });
 
-        JCheckBox obstacleCheckbox = new JCheckBox("Enable Random Obstacles");
+        obstacleCheckbox = new JCheckBox("Enable Random Obstacles");
         obstacleCheckbox.setSelected(GameSettings.isObstaclesEnabled());
         obstacleCheckbox.setForeground(Color.WHITE);
         obstacleCheckbox.setBackground(Color.BLACK);
         obstacleCheckbox.setAlignmentX(CENTER_ALIGNMENT);
+
+        // Moving obstacles toggle
+        movingObsCheckbox = new JCheckBox("Enable Moving Obstacles");
+        movingObsCheckbox.setSelected(GameSettings.isMovingObstaclesEnabled());
+        movingObsCheckbox.setForeground(Color.WHITE);
+        movingObsCheckbox.setBackground(Color.BLACK);
+        movingObsCheckbox.setAlignmentX(CENTER_ALIGNMENT);
+
+        // Spinner for obstacle count
+        SpinnerNumberModel model = new SpinnerNumberModel(
+                GameSettings.getMovingObstacleCount(), 0,
+                GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT, 1);
+        movingObsCountSpinner = new JSpinner(model);
+        movingObsCountSpinner.setMaximumSize(new Dimension(100, 25));
+        movingObsCountSpinner.setAlignmentX(CENTER_ALIGNMENT);
+
+        JLabel countLabel = new JLabel("Number of Moving Obstacles:");
+        countLabel.setForeground(Color.WHITE);
+        countLabel.setAlignmentX(CENTER_ALIGNMENT);
+
+        // Auto-increment toggle
+        movingObsAutoIncrement = new JCheckBox("Auto Increment Obstacles");
+        movingObsAutoIncrement.setSelected(GameSettings.isMovingObstaclesAutoIncrement());
+        movingObsAutoIncrement.setForeground(Color.WHITE);
+        movingObsAutoIncrement.setBackground(Color.BLACK);
+        movingObsAutoIncrement.setAlignmentX(CENTER_ALIGNMENT);
+
+        //Buttons
 
         JButton save = new JButton("✅ Save");
         save.setAlignmentX(CENTER_ALIGNMENT);
         save.addActionListener(e -> {
             GameSettings.setDifficultyLevel(speedSlider.getValue());
             GameSettings.setObstaclesEnabled(obstacleCheckbox.isSelected());
+            GameSettings.setMovingObstaclesEnabled(movingObsCheckbox.isSelected());
+            GameSettings.setMovingObstacleCount((Integer) movingObsCountSpinner.getValue());
+            GameSettings.setMovingObstaclesAutoIncrement(movingObsAutoIncrement.isSelected());
             JOptionPane.showMessageDialog(this, "Settings saved!");
         });
 
@@ -79,6 +116,13 @@ public class DifficultyPanel extends JPanel {
         add(speedLabel);
         add(Box.createVerticalStrut(20));
         add(obstacleCheckbox);
+        add(Box.createVerticalStrut(15));
+        add(movingObsCheckbox);
+        add(Box.createVerticalStrut(10));
+        add(countLabel);
+        add(movingObsCountSpinner);
+        add(Box.createVerticalStrut(10));
+        add(movingObsAutoIncrement);
         add(Box.createVerticalStrut(20));
         add(save);
         add(Box.createVerticalStrut(10));
@@ -87,11 +131,11 @@ public class DifficultyPanel extends JPanel {
 
     private void updateSpeedLabel(int level) {
         String label;
-        if (level < 10) label = "Difficulty: Beginner";
-        else if (level < 20) label = "Difficulty: Easy";
-        else if (level < 30) label = "Difficulty: Medium";
-        else if (level < 40) label = "Difficulty: Hard";
-        else if (level < 50) label = "Difficulty: Expert";
+        if (level < EASY_LEVEL) label = "Difficulty: Beginner";
+        else if (level < MEDIUM_LEVEL) label = "Difficulty: Easy";
+        else if (level < HARD_LEVEL) label = "Difficulty: Medium";
+        else if (level < EXPERT_LEVEL) label = "Difficulty: Hard";
+        else if (level < INSANE_LEVEL) label = "Difficulty: Expert";
         else label = "Difficulty: Insane";
 
         speedLabel.setText(label + " (Level " + level + ")");
@@ -115,15 +159,5 @@ public class DifficultyPanel extends JPanel {
         label.setForeground(Color.LIGHT_GRAY);
         label.setFont(new Font("Arial", Font.PLAIN, 12));
         return label;
-    }
-
-    private int getDelayFromDifficulty(GameSettings.Difficulty difficulty) {
-        return switch (difficulty) {
-            case EASY -> EASY_LEVEL;
-            case NORMAL -> MEDIUM_LEVEL;
-            case HARD -> HARD_LEVEL;
-            case EXPERT -> EXPERT_LEVEL;
-            case INSANE -> INSANE_LEVEL;
-        };
     }
 }
