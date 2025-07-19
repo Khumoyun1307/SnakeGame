@@ -31,4 +31,9 @@ bin/
 ### Game data and settings
 
 scores.txt
-data/settings.txt
+data/
+output/
+runtime-windows/
+dist/
+
+
