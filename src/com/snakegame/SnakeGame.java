@@ -1,6 +1,5 @@
 package com.snakegame;
 
-import com.snakegame.config.GameSettings;
 import com.snakegame.config.GameSettingsManager;
 import com.snakegame.ui.GameFrame;
 

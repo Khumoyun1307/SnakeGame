@@ -139,13 +139,8 @@ public class GameState {
         updateNotifications();
 
         // 1) Move moving obstacles and check collision with snake head
-        if (GameSettings.isMovingObstaclesEnabled()) {
-            movingObstacles.forEach(MovingObstacle::update);
-            if (headHitsMovingObstacle(snake.getHead())) {
-                running = false;
-                return;
-            }
-        }
+        movingObstacles.forEach(MovingObstacle::update);
+        if (!checkMovingObstacleCollision()) return;
 
         // 2) Move snake (handles eating)
 
@@ -153,12 +148,26 @@ public class GameState {
         AppleType type = apple.getType();
         snake.move(ateApple);
 
-        if (GameSettings.isMovingObstaclesEnabled()) {
-            if (headHitsMovingObstacle(snake.getHead())) {
-                running = false;
-                return;
-            }
-        }
+        // ————— Wrap-around logic —————
+        Point head = snake.getHead();
+        int maxX = GameConfig.SCREEN_WIDTH  / GameConfig.UNIT_SIZE;
+        int maxY = GameConfig.SCREEN_HEIGHT / GameConfig.UNIT_SIZE;
+
+        // Convert pixel coordinates into cell indices
+        int cellX = head.x / GameConfig.UNIT_SIZE;
+        int cellY = head.y / GameConfig.UNIT_SIZE;
+
+        // Wrap indices
+        if (cellX < 0)            cellX = maxX - 1;
+        else if (cellX >= maxX)   cellX = 0;
+        if (cellY < 0)            cellY = maxY - 1;
+        else if (cellY >= maxY)   cellY = 0;
+
+        // Write back wrapped position
+        head.x = cellX * GameConfig.UNIT_SIZE;
+        head.y = cellY * GameConfig.UNIT_SIZE;
+        // ——————————————————————————
+
 
         Set<Point> forbidden = new HashSet<>(snake.getBody());
         forbidden.addAll(obstacles);
@@ -272,11 +281,7 @@ public class GameState {
 
     private void checkCollision() {
         Point head = snake.getHead();
-        // Border collision
-        if (head.x < 0 || head.x >= GameConfig.SCREEN_WIDTH
-                || head.y < 0 || head.y >= GameConfig.SCREEN_HEIGHT) {
-            running = false;
-        }
+
         // Self collision
         if (snake.isSelfColliding()) running = false;
         // Obstacle collision
@@ -290,6 +295,25 @@ public class GameState {
                 }
             }
         }
+    }
+
+    private void checkBorderCollision() {
+        // Border collision
+        Point head = snake.getHead();
+        if (head.x < 0 || head.x >= GameConfig.SCREEN_WIDTH
+                || head.y < 0 || head.y >= GameConfig.SCREEN_HEIGHT) {
+            running = false;
+        }
+    }
+
+    private boolean checkMovingObstacleCollision() {
+        if (GameSettings.isMovingObstaclesEnabled()) {
+            if (headHitsMovingObstacle(snake.getHead())) {
+                running = false;
+                return false;
+            }
+        }
+        return true;
     }
 
     // Getters

@@ -4,7 +4,7 @@ import com.snakegame.config.GameSettings;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import com.snakegame.sound.BackgroundMusicPlayer;
+import com.snakegame.sound.MusicManager;
 
 public class SettingsPanel extends JPanel {
     private final JCheckBox soundCheck;
@@ -112,14 +112,17 @@ public class SettingsPanel extends JPanel {
             GameSettings.setShowGrid(gridCheck.isSelected());
             GameSettings.setSelectedTheme((GameSettings.Theme)themeCombo.getSelectedItem());
 
-            boolean nowMusicOn = musicCheck.isSelected();
-            if (wasMusicOn != nowMusicOn) {
-                if (nowMusicOn) {
-                    BackgroundMusicPlayer.play("backgroundMusic.wav", true);
-                } else {
-                    BackgroundMusicPlayer.stop();
-                    }
-                }
+            boolean nowMusicOn;
+            boolean nowSoundOn;
+            nowMusicOn = musicCheck.isSelected();
+            nowSoundOn = soundCheck.isSelected();
+            MusicManager.update(MusicManager.Screen.GAMEPLAY, nowMusicOn);
+            MusicManager.setWasMusicOn(nowMusicOn);
+            MusicManager.setWasSoundOn(nowSoundOn);
+            wasMusicOn = nowMusicOn;
+            wasSoundOn = nowSoundOn;
+
+
             JOptionPane.showMessageDialog(this, "Settings saved!");
         });
         return save;

@@ -1,18 +1,25 @@
 package com.snakegame.config;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.GameConfig;
 
+
 public class GameSettingsManager {
     private static final String FILE_PATH = "data/settings.txt";
+    private static final Logger log = Logger.getLogger(GameSettingsManager.class.getName());
 
     public static void load() {
         File file = new File(FILE_PATH);
         if (!file.exists()) return;
 
-        try (FileReader reader = new FileReader(file)) {
+        try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8))  {
             Properties props = new Properties();
             props.load(reader);
 
@@ -68,12 +75,19 @@ public class GameSettingsManager {
 
 
         } catch (IOException | NumberFormatException e) {
-            System.err.println("Failed to load settings: " + e.getMessage());
+            log.log(Level.SEVERE, "Failed to load settings", e);
         }
     }
 
     public static void save() {
-        try (FileWriter writer = new FileWriter(FILE_PATH)) {
+        File file = new File(FILE_PATH);
+        File parent = file.getParentFile();
+        if (!parent.exists() && !parent.mkdirs()) {
+            log.log(Level.SEVERE, "Failed to create settings directory: " + parent.getPath());
+            return; // or throw if you’d rather abort hard
+        }
+
+        try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))  {
             Properties props = new Properties();
             props.setProperty("difficultyLevel", String.valueOf(GameSettings.getDifficultyLevel()));
             props.setProperty("obstaclesEnabled", String.valueOf(GameSettings.isObstaclesEnabled()));
@@ -96,7 +110,7 @@ public class GameSettingsManager {
                     String.valueOf(GameSettings.isMovingObstaclesAutoIncrement()));
             props.store(writer, "Game Settings");
         } catch (IOException e) {
-            System.err.println("Failed to save settings: " + e.getMessage());
+            log.log(Level.SEVERE, "Failed to save settings", e);
         }
     }
 }

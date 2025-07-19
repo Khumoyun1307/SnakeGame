@@ -8,7 +8,7 @@ import java.util.*;
 
 public class ScoreManager {
 
-    private static final String SCORE_FILE = "scores.txt";
+    private static String scoreFilePath = "scores.txt";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final List<String> scores = new ArrayList<>();
 
@@ -20,7 +20,7 @@ public class ScoreManager {
     private static void loadFromFile() {
         scores.clear();
         try {
-            Path path = Paths.get(SCORE_FILE);
+            Path path = Paths.get(scoreFilePath);
             if (Files.exists(path)) {
                 scores.addAll(Files.readAllLines(path));
             }
@@ -28,6 +28,23 @@ public class ScoreManager {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Sets a custom file path for testing or alternate storage,
+     * and reloads scores from that file.
+     */
+    public static void setScoreFilePath(String path) {
+        scoreFilePath = path;
+        loadFromFile();
+    }
+
+    /**
+     * Clears in-memory scores. For testing only.
+     */
+    public static void clearScores() {
+        scores.clear();
+    }
+
 
     // Adds a new score to memory and appends it to the file
     public static void addScore(int score) {
@@ -39,7 +56,7 @@ public class ScoreManager {
     private static void appendToFile(String entry) {
         try {
             Files.write(
-                    Paths.get(SCORE_FILE),
+                    Paths.get(scoreFilePath),
                     Collections.singletonList(entry),
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND
@@ -58,7 +75,7 @@ public class ScoreManager {
     public static void saveAllToFile() {
         try {
             Files.write(
-                    Paths.get(SCORE_FILE),
+                    Paths.get(scoreFilePath),
                     scores,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING

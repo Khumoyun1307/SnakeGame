@@ -2,6 +2,7 @@ package com.snakegame.controller;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.model.*;
+import com.snakegame.sound.MusicManager;
 import com.snakegame.sound.SoundPlayer;
 import com.snakegame.ui.SettingsPanel;
 import com.snakegame.util.ScoreManager;
@@ -45,7 +46,7 @@ public class GameController implements ActionListener, KeyListener {
         showPauseDialog(parent);
     }
 
-    private void showPauseDialog(Component parent) {
+    protected void showPauseDialog(Component parent) {
         JDialog dialog = new JDialog(
                 SwingUtilities.getWindowAncestor(parent),
                 "Game Paused",
@@ -89,7 +90,7 @@ public class GameController implements ActionListener, KeyListener {
         JButton settings = new JButton("⚙ Settings");
         styleButton.accept(settings);
         settings.addActionListener(e -> {
-            dialog.dispose();
+            // dialog.dispose();
             showInGameSettings(parent);
         });
 
@@ -138,7 +139,7 @@ public class GameController implements ActionListener, KeyListener {
         // Pass Back = reopen the pause menu
         SettingsPanel panel = new SettingsPanel(e -> {
             dlg.dispose();
-            pauseGame(parent);
+            // MusicManager.update(MusicManager.Screen.GAMEPLAY);
         });
         dlg.getContentPane().add(panel);
         dlg.pack();
@@ -222,7 +223,7 @@ public class GameController implements ActionListener, KeyListener {
     }
 
 
-    private void resumeGame() {
+    void resumeGame() {
         paused = false;
         timer.start();
     }
@@ -248,7 +249,7 @@ public class GameController implements ActionListener, KeyListener {
         }
     }
 
-    private int showPauseMenu(Component parentComponent) {
+    int showPauseMenu(Component parentComponent) {
         String[] options = {"Resume", "Restart", "Back to Menu", "Exit"};
         return JOptionPane.showOptionDialog(
                 parentComponent,
@@ -271,7 +272,15 @@ public class GameController implements ActionListener, KeyListener {
         showGameOverDialog();
     }
 
-    private void showGameOverDialog() {
+    private void showGameOverMenuWithoutSound() {
+        timer.stop();
+        if (gameState.getScore() > 0) {
+            ScoreManager.addScore(gameState.getScore());
+        }
+        showGameOverDialog();
+    }
+
+    protected void showGameOverDialog() {
         JDialog dialog = new JDialog(
                 (Frame) null,
                 "Game Over",
@@ -338,7 +347,7 @@ public class GameController implements ActionListener, KeyListener {
             if (choice == JOptionPane.YES_OPTION) {
                 System.exit(0);
             } else {
-                showGameOverMenu();
+                showGameOverMenuWithoutSound();
             }
         });
 

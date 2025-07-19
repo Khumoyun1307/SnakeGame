@@ -1,29 +1,42 @@
 package com.snakegame.util;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.nio.file.*;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Persists and provides the set of unlocked maps for MAP_SELECT and RACE modes.
  */
 public class ProgressManager {
-    private static final String FILE_PATH = "data/progress.txt";
+    private static String filePath = "data/progress.txt";
     private static final Set<Integer> unlockedMaps = new HashSet<>();
 
     static {
         load();
     }
 
+    /**
+     * Sets a custom file path for testing or alternate storage.
+     */
+    public static void setFilePath(String path) {
+        filePath = path;
+    }
+
+    /**
+     * Clears in-memory unlocked maps. For testing only.
+     */
+    public static void clearUnlockedMaps() {
+        unlockedMaps.clear();
+    }
+
+    /**
+     * Loads unlocked maps from the configured file path.
+     * If the file does not exist, defaults to map 1 unlocked.
+     */
     public static void load() {
-        Path path = Paths.get(FILE_PATH);
+        unlockedMaps.clear();
+        Path path = Paths.get(filePath);
         if (!Files.exists(path)) {
             unlockedMaps.add(1);
             save();
@@ -55,7 +68,7 @@ public class ProgressManager {
         String line = "unlockedMaps=" + joined;
         try {
             Files.write(
-                    Paths.get(FILE_PATH),
+                    Paths.get(filePath),
                     Collections.singletonList(line),
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING

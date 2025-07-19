@@ -1,46 +1,49 @@
-package test.snakegame;
+package com.snakegame.util;
 
-import com.snakegame.util.ProgressManager;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class ProgressManagerTest {
-    private static final Path PROGRESS_PATH = Path.of("data/progress.txt");
-    private byte[] original;
+    @TempDir Path tempDir;
+    private Path progressFile;
 
     @BeforeEach
-    void backupProgress() throws Exception {
-        if (Files.exists(PROGRESS_PATH)) {
-            original = Files.readAllBytes(PROGRESS_PATH);
-        }
-        // reset file
-        Files.deleteIfExists(PROGRESS_PATH);
-        ProgressManager.getUnlockedMaps().clear();
-        ProgressManager.unlockMap(1);
-    }
+    void setUp() throws Exception {
+        // point ProgressManager at a fresh temp file
+        progressFile = tempDir.resolve("progress.txt");
+        ProgressManager.setFilePath(progressFile.toString());
 
-    @AfterEach
-    void restoreProgress() throws Exception {
-        if (original != null) {
-            Files.write(PROGRESS_PATH, original);
-        }
+        // clear in-memory state, then load (should default to map 1)
+        ProgressManager.clearUnlockedMaps();
+        ProgressManager.load();
     }
 
     @Test
-    void testUnlockAndPersistence() {
+    void load_createsDefaultMap1Unlocked() {
+        Set<Integer> unlocked = ProgressManager.getUnlockedMaps();
+        assertEquals(Set.of(1), unlocked, "Default unlocked set should contain only 1");
         assertTrue(ProgressManager.isMapUnlocked(1));
-        assertFalse(ProgressManager.isMapUnlocked(2));
+    }
 
-        ProgressManager.unlockMap(2);
-        assertTrue(ProgressManager.isMapUnlocked(2));
+    @Test
+    void unlockMap_addsAndPersists() throws Exception {
+        // unlock a new map
+        ProgressManager.unlockMap(3);
+        assertTrue(ProgressManager.isMapUnlocked(3));
 
-        // Reload
+        // reload from disk to verify persistence
+        ProgressManager.clearUnlockedMaps();
         ProgressManager.load();
-        assertTrue(ProgressManager.isMapUnlocked(2));
+        Set<Integer> reloaded = ProgressManager.getUnlockedMaps();
+
+        assertTrue(reloaded.containsAll(Set.of(1, 3)),
+                "After reload, both map 1 and map 3 should be unlocked");
     }
 }

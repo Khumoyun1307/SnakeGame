@@ -149,4 +149,48 @@ public class GameSettings {
         developerModeEnabled = enabled;
     }
 
+    /**
+     * Capture all mutable settings into a snapshot object.
+     */
+
+    public static SettingsSnapshot snapshot() {
+        return new SettingsSnapshot(
+                difficultyLevel,
+                obstaclesEnabled,
+                currentMode,
+                selectedMapId,
+                raceThreshold,
+                soundEnabled,
+                musicEnabled,
+                showGrid,
+                playerName,
+                selectedTheme,
+                movingObstaclesEnabled,
+                movingObstacleCount,
+                movingObstaclesAutoIncrement,
+                developerModeEnabled
+        );
+    }
+
+    /**
+     * Restore all mutable settings from a previously taken snapshot.
+     */
+
+    public static void restore(SettingsSnapshot s) {
+        difficultyLevel               = s.difficultyLevel();
+        obstaclesEnabled             = s.obstaclesEnabled();
+        currentMode                  = s.currentMode();
+        selectedMapId                = s.selectedMapId();
+        raceThreshold                = s.raceThreshold();
+        soundEnabled                 = s.soundEnabled();
+        musicEnabled                 = s.musicEnabled();
+        showGrid                     = s.showGrid();
+        playerName                   = s.playerName();
+        selectedTheme                = s.selectedTheme();
+        movingObstaclesEnabled       = s.movingObstaclesEnabled();
+        movingObstacleCount          = s.movingObstacleCount();
+        movingObstaclesAutoIncrement = s.movingObstaclesAutoIncrement();
+        developerModeEnabled         = s.developerModeEnabled();
+    }
+
 }

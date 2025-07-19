@@ -3,6 +3,7 @@ package com.snakegame.ui;
 import com.snakegame.config.GameSettings;
 import com.snakegame.mode.GameMode;
 import com.snakegame.sound.BackgroundMusicPlayer;
+import com.snakegame.sound.MusicManager;
 import com.snakegame.view.GamePanel;
 import javax.swing.*;
 import java.awt.*;
@@ -45,10 +46,12 @@ public class GameFrame extends JFrame {
         recreateGamePanel();
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             cardLayout.show(cardPanel, "menu");
+            MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
         gamePanel.addPropertyChangeListener("showSettings", evt -> {
             BackgroundMusicPlayer.stop();      // optional: stop music
             cardLayout.show(cardPanel, "settings");
+            MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
         SettingsPanel settingsPanel = new SettingsPanel(e -> cardLayout.show(cardPanel, "menu"));
         StatsPanel statsPanel = new StatsPanel(e -> cardLayout.show(cardPanel, "menu"));
@@ -66,6 +69,7 @@ public class GameFrame extends JFrame {
         ImageIcon icon = new ImageIcon("resources/snake_icon.png"); // your icon path
         this.setIconImage(icon.getImage());
         this.setVisible(true);
+        MusicManager.update(MusicManager.Screen.MAIN_MENU);
         gamePanel.requestFocusInWindow();
 
     }
@@ -77,7 +81,7 @@ public class GameFrame extends JFrame {
                 cardLayout.show(cardPanel, "game");
                 gamePanel.startGame();
 
-                BackgroundMusicPlayer.play("backgroundMusic.wav", true);
+                MusicManager.update(MusicManager.Screen.GAMEPLAY);
             }
             case "race" -> {
                 GameSettings.setCurrentMode(GameMode.RACE);
@@ -86,27 +90,37 @@ public class GameFrame extends JFrame {
                 cardLayout.show(cardPanel, "game");
                 gamePanel.startGame();
 
-                BackgroundMusicPlayer.play("backgroundMusic.wav", true);
+                MusicManager.update(MusicManager.Screen.GAMEPLAY);
             }
             case "mode" -> {
                 ModePanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("mode", modePanel);
                 cardLayout.show(cardPanel, "mode");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "difficulty" -> {
                 JPanel diffPanel = new DifficultyPanel(() -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("difficulty", diffPanel);
                 cardLayout.show(cardPanel, "difficulty");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "settings" -> {
-                SettingsPanel settingsPanel = new SettingsPanel(evt -> cardLayout.show(cardPanel, "menu"));
+                SettingsPanel settingsPanel = new SettingsPanel(evt ->
+                {
+                    cardLayout.show(cardPanel, "menu");
+                    // re-evaluate menu music after toggling
+                    MusicManager.update(MusicManager.Screen.MAIN_MENU);
+                });
+
                 replaceCard("settings", settingsPanel);
                 cardLayout.show(cardPanel, "settings");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "stats" -> {
                 StatsPanel statsPanel = new StatsPanel(evt -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("stats", statsPanel);
                 cardLayout.show(cardPanel, "stats");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "exit" -> {
                 int choice = JOptionPane.showConfirmDialog(
@@ -140,12 +154,14 @@ public class GameFrame extends JFrame {
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             BackgroundMusicPlayer.stop();
             cardLayout.show(cardPanel, "menu");
+            MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
 
         // ALSO stop music and show settings
         gamePanel.addPropertyChangeListener("showSettings", evt -> {
             BackgroundMusicPlayer.stop();
             cardLayout.show(cardPanel, "settings");
+            MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
 
         cardPanel.add(gamePanel, "game");
