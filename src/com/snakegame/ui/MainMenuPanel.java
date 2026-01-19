@@ -1,19 +1,19 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
-import com.snakegame.mode.GameMode;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-
+import com.snakegame.util.ProgressManager;
 public class MainMenuPanel extends JPanel {
 
     private final ActionListener menuListener;
     private boolean ctrlDown = false;
     private final StringBuilder codeBuffer = new StringBuilder();
     private boolean devButtonAdded = false;
+    private JButton continueButton;
 
     public MainMenuPanel(ActionListener menuListener) {
         this.menuListener = menuListener;
@@ -24,9 +24,21 @@ public class MainMenuPanel extends JPanel {
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        // ✅ Use the FIELD, not a local variable
+        this.continueButton = new JButton("▶ Continue");
+        this.continueButton.setActionCommand("continue");
+//        this.continueButton.addActionListener(menuListener);
+
+        this.continueButton.addActionListener(evt -> {
+            System.out.println("CONTINUE CLICKED");
+            menuListener.actionPerformed(evt);
+        });
+
         JButton playButton = new JButton("▶ Play Snake Game");
         JButton raceButton = new JButton("🏁 Race Mode");
+        JButton aiButton = new JButton("🤖 AI Mode (A*)");
         JButton modeButton = new JButton("🗺 Select Map");
+        JButton replayButton = new JButton("🎬 Replay Games");
         JButton difficultyButton = new JButton("🎯 Difficulty");
         JButton settingsButton = new JButton("⚙ Settings");
         JButton statsButton = new JButton("📊 Stats");
@@ -34,7 +46,9 @@ public class MainMenuPanel extends JPanel {
 
         playButton.setActionCommand("play");
         raceButton.setActionCommand("race");
+        aiButton.setActionCommand("aiMenu");
         modeButton.setActionCommand("mode");
+        replayButton.setActionCommand("replay");
         difficultyButton.setActionCommand("difficulty");
         settingsButton.setActionCommand("settings");
         statsButton.setActionCommand("stats");
@@ -42,33 +56,41 @@ public class MainMenuPanel extends JPanel {
 
         playButton.addActionListener(menuListener);
         raceButton.addActionListener(menuListener);
+        aiButton.addActionListener(menuListener);
         modeButton.addActionListener(menuListener);
+        replayButton.addActionListener(menuListener);
         difficultyButton.addActionListener(menuListener);
         settingsButton.addActionListener(menuListener);
         statsButton.addActionListener(menuListener);
         exitButton.addActionListener(menuListener);
 
-        gbc.gridy = 0; this.add(playButton, gbc);
-        gbc.gridy = 1; this.add(raceButton, gbc);
-        gbc.gridy = 2; this.add(modeButton, gbc);
-        gbc.gridy = 3; this.add(difficultyButton, gbc);
-        gbc.gridy = 4; this.add(settingsButton, gbc);
-        gbc.gridy = 5; this.add(statsButton, gbc);
-        gbc.gridy = 6; this.add(exitButton, gbc);
+        // ✅ Always add Continue first, then everything else shifted down
+        gbc.gridy = 0; this.add(this.continueButton, gbc);
+        gbc.gridy = 1; this.add(playButton, gbc);
+        gbc.gridy = 2; this.add(raceButton, gbc);
+        gbc.gridy = 3; this.add(aiButton, gbc);
+        gbc.gridy = 4; this.add(modeButton, gbc);
+        gbc.gridy = 5; this.add(replayButton, gbc);
+        gbc.gridy = 6; this.add(difficultyButton, gbc);
+        gbc.gridy = 7; this.add(settingsButton, gbc);
+        gbc.gridy = 8; this.add(statsButton, gbc);
+        gbc.gridy = 9; this.add(exitButton, gbc);
+
+        // ✅ Sets visible/text correctly based on saved game presence
+        refreshContinueButton();
 
         setFocusable(true);
         requestFocusInWindow();
+
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                // Track Ctrl state
                 if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
                     ctrlDown = true;
                     return;
                 }
                 if (!ctrlDown) return;
 
-                // Append the right character for each key
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_7   -> codeBuffer.append('7');
                     case KeyEvent.VK_1   -> codeBuffer.append('1');
@@ -80,11 +102,10 @@ public class MainMenuPanel extends JPanel {
                     case KeyEvent.VK_O   -> codeBuffer.append('o');
                     case KeyEvent.VK_P   -> codeBuffer.append('p');
                     case KeyEvent.VK_R   -> codeBuffer.append('r');
-                    default              -> { return; } // ignore everything else
+                    default              -> { return; }
                 }
 
                 String target = "713Developer";
-                // keep only the last N chars
                 if (codeBuffer.length() > target.length()) {
                     codeBuffer.delete(0, codeBuffer.length() - target.length());
                 }
@@ -100,22 +121,34 @@ public class MainMenuPanel extends JPanel {
 
             @Override
             public void keyReleased(KeyEvent e) {
-                // Reset if Ctrl is released
                 if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
                     ctrlDown = false;
                     codeBuffer.setLength(0);
                 }
             }
         });
-
     }
+
+
+    public void refreshContinueButton() {
+        if (ProgressManager.hasSavedGame()) {
+            int savedScore = ProgressManager.getSavedGameScore().orElse(0);
+            continueButton.setText("▶ Continue (" + savedScore + ")");
+            continueButton.setVisible(true);
+        } else {
+            continueButton.setVisible(false);
+        }
+        revalidate();
+        repaint();
+    }
+
 
     private void addDeveloperButton() {
         if (devButtonAdded) return;
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10,10,10,10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.gridy = 7; // after your existing 0–6 rows
+        gbc.gridy = 9; // after your existing 0–6 rows
         gbc.gridx = 0;
 
         JButton dev = new JButton("🛠 Developer");

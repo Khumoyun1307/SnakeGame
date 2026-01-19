@@ -1,15 +1,23 @@
 package com.snakegame.controller;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.controller.input.AiDirectionProvider;
+import com.snakegame.controller.input.DirectionProvider;
+import com.snakegame.controller.input.PlayerDirectionProvider;
 import com.snakegame.model.*;
-import com.snakegame.sound.MusicManager;
+import com.snakegame.mode.GameMode;
+import com.snakegame.replay.ReplayData;
+import com.snakegame.replay.ReplayEvent;
+import com.snakegame.replay.ReplayManager;
 import com.snakegame.sound.SoundPlayer;
 import com.snakegame.ui.SettingsPanel;
+import com.snakegame.util.ProgressManager;
 import com.snakegame.util.ScoreManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
 import java.util.function.Consumer;
 
 public class GameController implements ActionListener, KeyListener {
@@ -20,8 +28,14 @@ public class GameController implements ActionListener, KeyListener {
     private final Runnable restartCallback;
     private final Runnable goToMainMenuCallback;
     private final Runnable settingsCallback;
+
     private boolean paused = false;
     private boolean inputLocked = false;
+
+    private final DirectionProvider directionProvider;
+
+    // Replay recording (LIVE only; for now we record player games only)
+    private final ArrayList<ReplayEvent> recordedEvents = new ArrayList<>();
 
     public GameController(GameState gameState,
                           Runnable repaintCallback,
@@ -33,7 +47,17 @@ public class GameController implements ActionListener, KeyListener {
         this.restartCallback = restartCallback;
         this.goToMainMenuCallback = goToMainMenuCallback;
         this.settingsCallback = settingsCallback;
+
         this.timer = new Timer(GameSettings.getSpeedDelayFromDifficultyLevel(), this);
+
+        if (GameSettings.getCurrentMode() == GameMode.AI) {
+            this.directionProvider = new AiDirectionProvider(GameSettings.getAiMode());
+        } else {
+            this.directionProvider = new PlayerDirectionProvider();
+        }
+
+        // initial tickMs alignment
+        this.gameState.setTickMs(GameSettings.getSpeedDelayFromDifficultyLevel());
     }
 
     public void start() {
@@ -53,6 +77,7 @@ public class GameController implements ActionListener, KeyListener {
                 Dialog.ModalityType.APPLICATION_MODAL
         );
         dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
         JPanel panel = new JPanel();
         panel.setBackground(Color.DARK_GRAY);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -73,7 +98,6 @@ public class GameController implements ActionListener, KeyListener {
         panel.add(scoreLabel);
         panel.add(Box.createVerticalStrut(20));
 
-        // Helper to create each button
         Consumer<JButton> styleButton = btn -> {
             btn.setMaximumSize(new Dimension(200, 40));
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -89,9 +113,14 @@ public class GameController implements ActionListener, KeyListener {
 
         JButton settings = new JButton("⚙ Settings");
         styleButton.accept(settings);
-        settings.addActionListener(e -> {
-            // dialog.dispose();
-            showInGameSettings(parent);
+        settings.addActionListener(e -> showInGameSettings(parent));
+
+        JButton saveQuit = new JButton("💾 Save & Quit");
+        styleButton.accept(saveQuit);
+        saveQuit.addActionListener(e -> {
+            ProgressManager.saveGame(GameSnapshot.captureFrom(gameState));
+            dialog.dispose();
+            goToMainMenuCallback.run();
         });
 
         JButton restart = new JButton("🔄 Restart");
@@ -115,8 +144,7 @@ public class GameController implements ActionListener, KeyListener {
             handleExitFromPause();
         });
 
-        // Add buttons with spacing
-        for (JButton b : new JButton[]{resume, settings, restart, menu, exit}) {
+        for (JButton b : new JButton[]{resume, settings, saveQuit, restart, menu, exit}) {
             panel.add(b);
             panel.add(Box.createVerticalStrut(10));
         }
@@ -127,20 +155,12 @@ public class GameController implements ActionListener, KeyListener {
         dialog.setVisible(true);
     }
 
-     /**
-     +     * Show SettingsPanel modally during a pause.
-     +     * Back → re-open pause dialog.
-     +     **/
     private void showInGameSettings(Component parent) {
         JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 "Settings",
                 Dialog.ModalityType.APPLICATION_MODAL
-                );
-        // Pass Back = reopen the pause menu
-        SettingsPanel panel = new SettingsPanel(e -> {
-            dlg.dispose();
-            // MusicManager.update(MusicManager.Screen.GAMEPLAY);
-        });
+        );
+        SettingsPanel panel = new SettingsPanel(e -> dlg.dispose());
         dlg.getContentPane().add(panel);
         dlg.pack();
         dlg.setLocationRelativeTo(parent);
@@ -158,18 +178,13 @@ public class GameController implements ActionListener, KeyListener {
 
         switch (choice) {
             case JOptionPane.YES_OPTION -> {
-                if (gameState.getScore() > 0) {
-                    ScoreManager.addScore(gameState.getScore());
-                }
+                if (gameState.getScore() > 0) ScoreManager.addScore(gameState.getScore());
                 restartCallback.run();
             }
             case JOptionPane.NO_OPTION -> restartCallback.run();
-            case JOptionPane.CANCEL_OPTION, JOptionPane.CLOSED_OPTION -> {
-                // Do nothing
-            }
+            default -> { }
         }
     }
-
 
     private void handleBackToMenuFromPause() {
         int choice = JOptionPane.showConfirmDialog(
@@ -182,46 +197,37 @@ public class GameController implements ActionListener, KeyListener {
 
         switch (choice) {
             case JOptionPane.YES_OPTION -> {
-                if (gameState.getScore() > 0) {
-                    ScoreManager.addScore(gameState.getScore());
-                }
+                if (gameState.getScore() > 0) ScoreManager.addScore(gameState.getScore());
                 goToMainMenuCallback.run();
             }
             case JOptionPane.NO_OPTION -> goToMainMenuCallback.run();
-            case JOptionPane.CANCEL_OPTION, JOptionPane.CLOSED_OPTION -> {
-                // Do nothing — stay in game
-            }
+            default -> { }
         }
     }
 
     private void handleExitFromPause() {
-        // 1) Save-score prompt
         int saveChoice = JOptionPane.showConfirmDialog(
-            null,
-            "Do you want to save your score before exiting?",
-            "Save Score?",
-            JOptionPane.YES_NO_CANCEL_OPTION,
-            JOptionPane.QUESTION_MESSAGE
+                null,
+                "Do you want to save your score before exiting?",
+                "Save Score?",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
         );
-        if (saveChoice == JOptionPane.CANCEL_OPTION || saveChoice == JOptionPane.CLOSED_OPTION) {
-            return;
-        }
+        if (saveChoice == JOptionPane.CANCEL_OPTION || saveChoice == JOptionPane.CLOSED_OPTION) return;
+
         if (saveChoice == JOptionPane.YES_OPTION && gameState.getScore() > 0) {
             ScoreManager.addScore(gameState.getScore());
         }
-        // 2) Confirm-exit prompt
+
         int exitConfirm = JOptionPane.showConfirmDialog(
-            null,
-            "Are you sure you want to quit?",
+                null,
+                "Are you sure you want to quit?",
                 "Confirm Exit",
-            JOptionPane.YES_NO_OPTION,
+                JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
         );
-        if (exitConfirm == JOptionPane.YES_OPTION) {
-            System.exit(0);
-        }
+        if (exitConfirm == JOptionPane.YES_OPTION) System.exit(0);
     }
-
 
     void resumeGame() {
         paused = false;
@@ -230,46 +236,58 @@ public class GameController implements ActionListener, KeyListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (!paused && gameState.isRunning()) {
-            // Adjust timer delay based on slowed state
-            int baseDelay = GameSettings.getSpeedDelayFromDifficultyLevel();
-            if (gameState.isSlowed()) {
-                timer.setDelay(baseDelay + GameConfig.SLOWDOWN_OFFSET_MS);
-            } else {
-                timer.setDelay(baseDelay);
-            }
+        if (paused || !gameState.isRunning()) return;
 
-            gameState.update();
-            inputLocked = false;
-            repaintCallback.run();
+        // Keep tickMs deterministic: must match what GameState uses for duration conversions.
+        int baseDelay = GameSettings.getSpeedDelayFromDifficultyLevel();
+        int effectiveDelay = gameState.isSlowed()
+                ? baseDelay + GameConfig.SLOWDOWN_OFFSET_MS
+                : baseDelay;
 
-            if (!gameState.isRunning()) {
-                showGameOverMenu();
-            }
+        timer.setDelay(effectiveDelay);
+        gameState.setTickMs(effectiveDelay);
+
+        if (GameSettings.getCurrentMode() == GameMode.AI) {
+            Direction aiDir = directionProvider.nextDirection(gameState);
+            if (aiDir != null) gameState.setDirection(aiDir);
         }
-    }
 
-    int showPauseMenu(Component parentComponent) {
-        String[] options = {"Resume", "Restart", "Back to Menu", "Exit"};
-        return JOptionPane.showOptionDialog(
-                parentComponent,
-                "Game Paused",
-                "Pause Menu",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
+        gameState.update();
+        inputLocked = false;
+        repaintCallback.run();
+
+        if (!gameState.isRunning()) {
+            showGameOverMenu();
+        }
     }
 
     private void showGameOverMenu() {
         timer.stop();
         SoundPlayer.play("game_over.wav");
+
+        // Save replay BEFORE we mutate scores/settings
+        saveReplay();
+
         if (gameState.getScore() > 0) {
             ScoreManager.addScore(gameState.getScore());
         }
+        ProgressManager.clearSavedGame();
+
         showGameOverDialog();
+    }
+
+    private void saveReplay() {
+        // For now: record only player-run games (AI replay can be added later)
+        if (GameSettings.getCurrentMode() == GameMode.AI) return;
+
+        ReplayData data = new ReplayData();
+        data.seed = gameState.getSeed();
+        data.finalScore = gameState.getScore();
+        data.settingsSnapshot = GameSettings.snapshot();
+        data.events = new ArrayList<>(recordedEvents);
+
+        ReplayManager.saveLast(data);
+        ReplayManager.saveBestIfHigher(data);
     }
 
     private void showGameOverMenuWithoutSound() {
@@ -287,6 +305,7 @@ public class GameController implements ActionListener, KeyListener {
                 Dialog.ModalityType.APPLICATION_MODAL
         );
         dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
         JPanel panel = new JPanel();
         panel.setBackground(Color.BLACK);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -307,16 +326,17 @@ public class GameController implements ActionListener, KeyListener {
         panel.add(scoreLabel);
         panel.add(Box.createVerticalStrut(20));
 
-        // Buttons: Restart, Settings, Main Menu, Exit
         JButton restart = new JButton("🔄 Restart");
         JButton settings = new JButton("⚙ Settings");
         JButton menu = new JButton("🏠 Main Menu");
         JButton exit = new JButton("❌ Exit");
+
         Consumer<JButton> styleButton = btn -> {
             btn.setMaximumSize(new Dimension(200, 40));
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
             btn.setFocusPainted(false);
         };
+
         for (JButton b : new JButton[]{restart, settings, menu, exit}) {
             styleButton.accept(b);
             panel.add(b);
@@ -338,11 +358,11 @@ public class GameController implements ActionListener, KeyListener {
         exit.addActionListener(e -> {
             dialog.dispose();
             int choice = JOptionPane.showConfirmDialog(
-                null,
-                "Are you sure you want to quit?",
-                "Confirm Exit",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                    null,
+                    "Are you sure you want to quit?",
+                    "Confirm Exit",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
             );
             if (choice == JOptionPane.YES_OPTION) {
                 System.exit(0);
@@ -357,9 +377,10 @@ public class GameController implements ActionListener, KeyListener {
         dialog.setVisible(true);
     }
 
-
     @Override
     public void keyPressed(KeyEvent e) {
+        if (GameSettings.getCurrentMode() == GameMode.AI && e.getKeyCode() != KeyEvent.VK_SPACE) return;
+
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
             pauseGame((Component) e.getSource());
             return;
@@ -378,15 +399,16 @@ public class GameController implements ActionListener, KeyListener {
 
         if (newDirection != null) {
             gameState.setDirection(newDirection);
+
+            // Record ONLY when player changes direction (tick-based)
+            if (GameSettings.getCurrentMode() != GameMode.AI) {
+                recordedEvents.add(new ReplayEvent(gameState.getTick(), newDirection));
+            }
+
             inputLocked = true;
         }
     }
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-    }
-
-    @Override
-    public void keyTyped(KeyEvent e) {
-    }
+    @Override public void keyReleased(KeyEvent e) { }
+    @Override public void keyTyped(KeyEvent e) { }
 }

@@ -1,11 +1,12 @@
 #Game Settings
-#Sat Jul 19 15:35:35 MST 2025
-currentMode=RACE
-difficultyLevel=28
-movingObstacleCount=1
-movingObstaclesAutoIncrement=true
+#Mon Jan 19 00:36:59 MST 2026
+aiMode=SURVIVAL
+currentMode=STANDARD
+difficultyLevel=50
+movingObstacleCount=0
+movingObstaclesAutoIncrement=false
 movingObstaclesEnabled=false
-musicEnabled=false
+musicEnabled=true
 obstaclesEnabled=false
 playerName=Player
 raceThreshold=20

@@ -7,6 +7,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.snakegame.ai.AiMode;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.GameConfig;
 
@@ -73,6 +74,11 @@ public class GameSettingsManager {
                     Boolean.parseBoolean(props.getProperty("movingObstaclesAutoIncrement", "false"))
             );
 
+            try {
+                GameSettings.setAiMode(AiMode.valueOf(props.getProperty("aiMode", "SAFE")));
+            } catch (IllegalArgumentException ex) {
+                GameSettings.setAiMode(AiMode.SAFE);
+            }
 
         } catch (IOException | NumberFormatException e) {
             log.log(Level.SEVERE, "Failed to load settings", e);
@@ -108,6 +114,7 @@ public class GameSettingsManager {
                     String.valueOf(GameSettings.getMovingObstacleCount()));
             props.setProperty("movingObstaclesAutoIncrement",
                     String.valueOf(GameSettings.isMovingObstaclesAutoIncrement()));
+            props.setProperty("aiMode", GameSettings.getAiMode().name());
             props.store(writer, "Game Settings");
         } catch (IOException e) {
             log.log(Level.SEVERE, "Failed to save settings", e);

@@ -6,5 +6,6 @@ package com.snakegame.mode;
 public enum GameMode {
     STANDARD,   // Current behavior: random obstacles based on settings
     MAP_SELECT, // Play one unlocked map from file
-    RACE        // Progress through maps by eating apples
+    RACE,        // Progress through maps by eating apples
+    AI
 }

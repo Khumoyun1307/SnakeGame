@@ -14,13 +14,13 @@ import java.util.Map;
 /**
  * Map selection panel that uses only the in-memory map list.
  */
-public class ModePanel extends JPanel {
+public class MapModePanel extends JPanel {
     private int selectedMap;
     private final JPanel grid;
     private final ButtonGroup group;
     private final Map<Integer, JToggleButton> mapButtons;
 
-    public ModePanel(Runnable goBack) {
+    public MapModePanel(Runnable goBack) {
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
 

@@ -5,7 +5,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 
 public class Snake {
-    private final Deque<Point> body;
+    private Deque<Point> body;
     private Direction currentDirection;
 
     public Snake(Point start, int length, Direction initialDirection) {
@@ -15,6 +15,11 @@ public class Snake {
         for (int i = 0; i < length; i++) {
             body.addLast(new Point(start.x - i * GameConfig.UNIT_SIZE, start.y));
         }
+    }
+
+    private Snake(Deque<Point> body, Direction direction) {
+        this.body = body;
+        this.currentDirection = direction;
     }
 
     public void move(boolean grow) {
@@ -53,5 +58,15 @@ public class Snake {
     public boolean isSelfColliding() {
         Point head = getHead();
         return body.stream().skip(1).anyMatch(p -> p.equals(head));
+    }
+
+    public static Snake fromBody(java.util.List<Point> bodyPoints, Direction direction) {
+        java.util.Deque<Point> dq = new java.util.LinkedList<>();
+        for (Point p : bodyPoints) dq.addLast(new Point(p));
+        Snake s = new Snake(new Point(0,0), 1, direction); // temporary
+        s.body.clear();
+        s.body.addAll(dq);
+        s.currentDirection = direction;
+        return s;
     }
 }

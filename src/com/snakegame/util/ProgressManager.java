@@ -1,6 +1,10 @@
 package com.snakegame.util;
 
+import com.snakegame.model.GameSnapshot;
+
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -91,4 +95,11 @@ public class ProgressManager {
     public static Set<Integer> getUnlockedMaps() {
         return new HashSet<>(unlockedMaps);
     }
+
+    public static boolean hasSavedGame() { return GameSaveManager.hasSave(); }
+    public static void saveGame(GameSnapshot snapshot) { GameSaveManager.save(snapshot); }
+    public static Optional<GameSnapshot> loadGame() { return GameSaveManager.load(); }
+    public static void clearSavedGame() { GameSaveManager.clearSave(); }
+    public static OptionalInt getSavedGameScore() { return GameSaveManager.getSavedScore(); }
+
 }

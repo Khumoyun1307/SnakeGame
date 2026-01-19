@@ -2,8 +2,11 @@ package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.mode.GameMode;
+import com.snakegame.model.GameConfig;
+import com.snakegame.model.GameSnapshot;
 import com.snakegame.sound.BackgroundMusicPlayer;
 import com.snakegame.sound.MusicManager;
+import com.snakegame.util.ProgressManager;
 import com.snakegame.view.GamePanel;
 import javax.swing.*;
 import java.awt.*;
@@ -16,7 +19,8 @@ public class GameFrame extends JFrame {
     private final CardLayout cardLayout;
     private final JPanel cardPanel;
     private GamePanel gamePanel;
-
+    private MainMenuPanel menuPanel;
+    private ReplayPanel replayPanel;
 
     public GameFrame() {
         this.setTitle("Snake");
@@ -36,16 +40,18 @@ public class GameFrame extends JFrame {
                 }
             }
         });
+
         this.setResizable(false);
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
 
         // Panels
-        MainMenuPanel menuPanel = new MainMenuPanel(this::handleMenuAction);
+        this.menuPanel = new MainMenuPanel(this::handleMenuAction);
         recreateGamePanel();
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             cardLayout.show(cardPanel, "menu");
+            this.menuPanel.refreshContinueButton(); // in-session update
             MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
         gamePanel.addPropertyChangeListener("showSettings", evt -> {
@@ -53,13 +59,18 @@ public class GameFrame extends JFrame {
             cardLayout.show(cardPanel, "settings");
             MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
+
         SettingsPanel settingsPanel = new SettingsPanel(e -> cardLayout.show(cardPanel, "menu"));
         StatsPanel statsPanel = new StatsPanel(e -> cardLayout.show(cardPanel, "menu"));
-
+         replayPanel = new ReplayPanel(() -> {
+            cardLayout.show(cardPanel, "menu");
+            MusicManager.update(MusicManager.Screen.MAIN_MENU);
+        });
 
         // Add cards
-        cardPanel.add(menuPanel, "menu");
+        cardPanel.add(this.menuPanel, "menu");
         cardPanel.add(gamePanel, "game");
+        cardPanel.add(replayPanel, "replay");
         cardPanel.add(settingsPanel, "settings");
         cardPanel.add(statsPanel, "stats");
 
@@ -77,8 +88,12 @@ public class GameFrame extends JFrame {
     private void handleMenuAction(ActionEvent e) {
         switch (e.getActionCommand()) {
             case "play" -> {
+                if (GameSettings.getCurrentMode() == GameMode.AI) {
+                    GameSettings.setCurrentMode(GameMode.STANDARD);
+                }
+                ProgressManager.clearSavedGame();
                 recreateGamePanel();
-                cardLayout.show(cardPanel, "game");
+                showGameCardExact();
                 gamePanel.startGame();
 
                 MusicManager.update(MusicManager.Screen.GAMEPLAY);
@@ -87,15 +102,39 @@ public class GameFrame extends JFrame {
                 GameSettings.setCurrentMode(GameMode.RACE);
                 GameSettings.setSelectedMapId(1);
                 recreateGamePanel();
-                cardLayout.show(cardPanel, "game");
+                showGameCardExact();
                 gamePanel.startGame();
 
                 MusicManager.update(MusicManager.Screen.GAMEPLAY);
             }
+            case "aiMenu" -> {
+                AiModePanel aiPanel = new AiModePanel(
+                        () -> cardLayout.show(cardPanel, "menu"),
+                        (selectedAiMode) -> {
+                            GameSettings.setAiMode(selectedAiMode);
+                            GameSettings.setCurrentMode(GameMode.AI);
+
+                            ProgressManager.clearSavedGame();
+                            recreateGamePanel();
+                            cardLayout.show(cardPanel, "game");
+                            gamePanel.startGame();
+                            MusicManager.update(MusicManager.Screen.GAMEPLAY);
+                        }
+                );
+                replaceCard("aiMode", aiPanel);
+                cardLayout.show(cardPanel, "aiMode");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
+            }
+
             case "mode" -> {
-                ModePanel modePanel = new ModePanel(() -> cardLayout.show(cardPanel, "menu"));
+                MapModePanel modePanel = new MapModePanel(() -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("mode", modePanel);
                 cardLayout.show(cardPanel, "mode");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
+            }
+            case "replay" -> {
+                replayPanel.onShow();
+                cardLayout.show(cardPanel, "replay");
                 MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "difficulty" -> {
@@ -140,20 +179,36 @@ public class GameFrame extends JFrame {
                 cardLayout.show(cardPanel, "mapEditor");
             }
 
+            case "continue" -> {
+                var opt = ProgressManager.loadGame();
+                if (opt.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "No saved game found.");
+                    return;
+                }
+                ProgressManager.clearSavedGame();
+                recreateGamePanel(opt.get());
+                showGameCardExact();
+                gamePanel.startGame();
+                MusicManager.update(MusicManager.Screen.GAMEPLAY);
+            }
+
         }
     }
 
-    private void recreateGamePanel() {
+    private void recreateGamePanel() { recreateGamePanel(null); }
+
+
+    private void recreateGamePanel(GameSnapshot snapshot) {
         if (gamePanel != null) {
             cardPanel.remove(gamePanel);
         }
-
-        gamePanel = new GamePanel();
+        gamePanel = (snapshot == null) ? new GamePanel() : new GamePanel(snapshot);
 
         // Listen for "goToMenu" again
         gamePanel.addPropertyChangeListener("goToMenu", evt -> {
             BackgroundMusicPlayer.stop();
             cardLayout.show(cardPanel, "menu");
+            this.menuPanel.refreshContinueButton();
             MusicManager.update(MusicManager.Screen.MAIN_MENU);
         });
 
@@ -176,6 +231,27 @@ public class GameFrame extends JFrame {
             }
         }
         cardPanel.add(newPanel, cardName);
+    }
+
+    private void showGameCardExact() {
+        cardLayout.show(cardPanel, "game");
+
+        // Make sure layout has updated before reading insets
+        cardPanel.revalidate();
+        cardPanel.repaint();
+
+        // Force content area to be EXACTLY the game board size
+        Insets insets = getInsets();
+        int frameW = GameConfig.SCREEN_WIDTH + insets.left + insets.right;
+        int frameH = GameConfig.SCREEN_HEIGHT + insets.top + insets.bottom;
+
+        setSize(frameW, frameH);
+        setLocationRelativeTo(null);
+
+        // Ensure GamePanel actually gets the size immediately
+        cardPanel.doLayout();
+
+        gamePanel.requestFocusInWindow();
     }
 
 }
