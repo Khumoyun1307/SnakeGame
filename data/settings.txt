@@ -1,16 +1,16 @@
 #Game Settings
-#Mon Jan 19 00:36:59 MST 2026
-aiMode=SURVIVAL
-currentMode=STANDARD
-difficultyLevel=50
+#Tue Jan 20 01:07:13 MST 2026
+aiMode=CHASE
+currentMode=MAP_SELECT
+difficultyLevel=0
 movingObstacleCount=0
 movingObstaclesAutoIncrement=false
 movingObstaclesEnabled=false
 musicEnabled=true
 obstaclesEnabled=false
-playerName=Player
+playerName=kkkk
 raceThreshold=20
-selectedMapId=2
+selectedMapId=1
 showGrid=false
 soundEnabled=false
 theme=NEON

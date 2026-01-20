@@ -29,8 +29,8 @@ class ScoreManagerTest {
 
     @Test
     void addScore_appendsEntries_andHighScoreIsCorrect() {
-        ScoreManager.addScore(10);
-        ScoreManager.addScore(25);
+        ScoreManager.addScore(10, timeSurvivedMs);
+        ScoreManager.addScore(25, timeSurvivedMs);
 
         List<String> all = ScoreManager.getScores();
         assertEquals(2, all.size());
@@ -43,8 +43,8 @@ class ScoreManagerTest {
     @Test
     void saveAllToFile_andLoadFromFile_reloadsEntries() throws Exception {
         // add and persist
-        ScoreManager.addScore(7);
-        ScoreManager.addScore(3);
+        ScoreManager.addScore(7, timeSurvivedMs);
+        ScoreManager.addScore(3, timeSurvivedMs);
         ScoreManager.saveAllToFile();
 
         // wipe memory, then reload from disk

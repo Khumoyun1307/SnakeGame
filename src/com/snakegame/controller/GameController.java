@@ -178,7 +178,7 @@ public class GameController implements ActionListener, KeyListener {
 
         switch (choice) {
             case JOptionPane.YES_OPTION -> {
-                if (gameState.getScore() > 0) ScoreManager.addScore(gameState.getScore());
+                if (gameState.getScore() > 0) ScoreManager.recordFinishedRun(gameState);
                 restartCallback.run();
             }
             case JOptionPane.NO_OPTION -> restartCallback.run();
@@ -197,7 +197,7 @@ public class GameController implements ActionListener, KeyListener {
 
         switch (choice) {
             case JOptionPane.YES_OPTION -> {
-                if (gameState.getScore() > 0) ScoreManager.addScore(gameState.getScore());
+                if (gameState.getScore() > 0) ScoreManager.recordFinishedRun(gameState);
                 goToMainMenuCallback.run();
             }
             case JOptionPane.NO_OPTION -> goToMainMenuCallback.run();
@@ -269,7 +269,7 @@ public class GameController implements ActionListener, KeyListener {
         saveReplay();
 
         if (gameState.getScore() > 0) {
-            ScoreManager.addScore(gameState.getScore());
+            ScoreManager.recordFinishedRun(gameState);
         }
         ProgressManager.clearSavedGame();
 

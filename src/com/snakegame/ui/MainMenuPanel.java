@@ -40,8 +40,9 @@ public class MainMenuPanel extends JPanel {
         JButton modeButton = new JButton("🗺 Select Map");
         JButton replayButton = new JButton("🎬 Replay Games");
         JButton difficultyButton = new JButton("🎯 Difficulty");
-        JButton settingsButton = new JButton("⚙ Settings");
+        JButton leaderboardButton = new JButton("🏆 Online Leaderboard");
         JButton statsButton = new JButton("📊 Stats");
+        JButton settingsButton = new JButton("⚙ Settings");
         JButton exitButton = new JButton("❌ Exit");
 
         playButton.setActionCommand("play");
@@ -50,6 +51,7 @@ public class MainMenuPanel extends JPanel {
         modeButton.setActionCommand("mode");
         replayButton.setActionCommand("replay");
         difficultyButton.setActionCommand("difficulty");
+        leaderboardButton.setActionCommand("leaderboard");
         settingsButton.setActionCommand("settings");
         statsButton.setActionCommand("stats");
         exitButton.setActionCommand("exit");
@@ -60,8 +62,9 @@ public class MainMenuPanel extends JPanel {
         modeButton.addActionListener(menuListener);
         replayButton.addActionListener(menuListener);
         difficultyButton.addActionListener(menuListener);
-        settingsButton.addActionListener(menuListener);
+        leaderboardButton.addActionListener(menuListener);
         statsButton.addActionListener(menuListener);
+        settingsButton.addActionListener(menuListener);
         exitButton.addActionListener(menuListener);
 
         // ✅ Always add Continue first, then everything else shifted down
@@ -72,9 +75,10 @@ public class MainMenuPanel extends JPanel {
         gbc.gridy = 4; this.add(modeButton, gbc);
         gbc.gridy = 5; this.add(replayButton, gbc);
         gbc.gridy = 6; this.add(difficultyButton, gbc);
-        gbc.gridy = 7; this.add(settingsButton, gbc);
+        gbc.gridy = 7; this.add(leaderboardButton, gbc);
         gbc.gridy = 8; this.add(statsButton, gbc);
-        gbc.gridy = 9; this.add(exitButton, gbc);
+        gbc.gridy = 9; this.add(settingsButton, gbc);
+        gbc.gridy = 10; this.add(exitButton, gbc);
 
         // ✅ Sets visible/text correctly based on saved game presence
         refreshContinueButton();

@@ -38,8 +38,18 @@ public class GameSettings {
     public static void setDifficulty(Difficulty d) { difficulty = d; GameSettingsManager.save(); }
 
     public static int getDifficultyLevel() { return difficultyLevel; }
+
     public static void setDifficultyLevel(int level) {
         difficultyLevel = Math.max(0, Math.min(50, level));
+
+        // FIX: keep enum Difficulty aligned with slider levels
+        if (difficultyLevel < 10) difficulty = Difficulty.EASY;        // Beginner -> EASY
+        else if (difficultyLevel < 20) difficulty = Difficulty.EASY;   // Easy
+        else if (difficultyLevel < 30) difficulty = Difficulty.NORMAL; // Medium
+        else if (difficultyLevel < 40) difficulty = Difficulty.HARD;   // Hard
+        else if (difficultyLevel < 50) difficulty = Difficulty.EXPERT; // Expert
+        else difficulty = Difficulty.INSANE;                           // Insane
+
         GameSettingsManager.save();
     }
 
@@ -51,7 +61,9 @@ public class GameSettings {
 
     public static GameMode getCurrentMode() { return currentMode; }
     public static void setCurrentMode(GameMode mode) {
-        if (mode == null) mode = GameMode.STANDARD;
+        if (mode == null) {
+            mode = GameMode.STANDARD;
+        }
         currentMode = mode;
         GameSettingsManager.save();
     }
@@ -98,7 +110,6 @@ public class GameSettings {
         return (int) (BEGINNER_DELAY - (difficultyLevel * DIFFICULTY_CONVERSION_MULTIPLIER));
     }
 
-    // ✅ ADD THIS: pure helper for replay/watch-only
     public static int speedDelayFromDifficultyLevel(int difficultyLevel) {
         int lvl = Math.max(0, Math.min(50, difficultyLevel));
         return (int) (BEGINNER_DELAY - (lvl * DIFFICULTY_CONVERSION_MULTIPLIER));

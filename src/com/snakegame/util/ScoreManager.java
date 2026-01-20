@@ -1,5 +1,9 @@
 package com.snakegame.util;
 
+import com.snakegame.config.GameSettings;
+import com.snakegame.mode.GameMode;
+import com.snakegame.net.LeaderboardClient;
+import com.snakegame.model.GameState;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDateTime;
@@ -11,6 +15,7 @@ public class ScoreManager {
     private static String scoreFilePath = "scores.txt";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final List<String> scores = new ArrayList<>();
+    private static final LeaderboardClient leaderboardClient = new LeaderboardClient();
 
     // Load scores from file once on class load
     static {
@@ -29,28 +34,57 @@ public class ScoreManager {
         }
     }
 
-    /**
-     * Sets a custom file path for testing or alternate storage,
-     * and reloads scores from that file.
-     */
     public static void setScoreFilePath(String path) {
         scoreFilePath = path;
         loadFromFile();
     }
 
-    /**
-     * Clears in-memory scores. For testing only.
-     */
     public static void clearScores() {
         scores.clear();
     }
 
-
-    // Adds a new score to memory and appends it to the file
     public static void addScore(int score) {
         String entry = FORMATTER.format(LocalDateTime.now()) + " - Score: " + score;
         scores.add(entry);
         appendToFile(entry);
+    }
+
+    public static void recordFinishedRun(GameState gameState) {
+        if (gameState == null) return;
+
+        int score = gameState.getScore();
+        if (score <= 0) return;
+
+        // Always save locally
+        addScore(score);
+
+        long timeSurvivedMs = gameState.getTick() * (long) gameState.getTickMs();
+
+        String mode = GameSettings.getCurrentMode().name();
+
+        int mapIdToSubmit;
+        if (mode.equals(GameMode.MAP_SELECT.name())) {
+            mapIdToSubmit = GameSettings.getSelectedMapId(); // 1..10
+        } else if (mode.equals(GameMode.RACE.name())) {
+            // FIX: RACE should submit the current/furthest map reached
+            mapIdToSubmit = GameSettings.getSelectedMapId();
+        } else {
+            mapIdToSubmit = 0; // STANDARD
+        }
+
+        leaderboardClient.submitScoreAsync(
+                GameSettings.getPlayerName(),
+                score,
+                mapIdToSubmit,
+                mode,
+                GameSettings.getDifficulty().name(),
+                timeSurvivedMs,
+                "1.0.0"
+        ).exceptionally(ex -> {
+            System.out.println("Leaderboard submit failed: " + ex.getMessage());
+            return null;
+        });
+
     }
 
     private static void appendToFile(String entry) {
@@ -66,12 +100,10 @@ public class ScoreManager {
         }
     }
 
-    // Returns a copy of the scores list to avoid external mutation
     public static List<String> getScores() {
         return new ArrayList<>(scores);
     }
 
-    // Flushes the current memory list to file — full rewrite
     public static void saveAllToFile() {
         try {
             Files.write(

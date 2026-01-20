@@ -76,6 +76,8 @@ public class GameFrame extends JFrame {
 
         this.add(cardPanel);
         this.pack();
+        setFrameToBoardSize();          // sets frame to board size
+        cardLayout.show(cardPanel, "menu"); // then show menu inside same frame
         this.setLocationRelativeTo(null);
         ImageIcon icon = new ImageIcon("resources/snake_icon.png"); // your icon path
         this.setIconImage(icon.getImage());
@@ -88,9 +90,15 @@ public class GameFrame extends JFrame {
     private void handleMenuAction(ActionEvent e) {
         switch (e.getActionCommand()) {
             case "play" -> {
-                if (GameSettings.getCurrentMode() == GameMode.AI) {
-                    GameSettings.setCurrentMode(GameMode.STANDARD);
+                if (GameSettings.getCurrentMode() == GameMode.AI || GameSettings.getCurrentMode() == GameMode.RACE){
+                    int mapId = GameSettings.getSelectedMapId();
+                    if (mapId >= 1) {
+                        GameSettings.setCurrentMode(GameMode.MAP_SELECT);
+                    } else {
+                        GameSettings.setCurrentMode(GameMode.STANDARD);
+                    }
                 }
+
                 ProgressManager.clearSavedGame();
                 recreateGamePanel();
                 showGameCardExact();
@@ -141,6 +149,15 @@ public class GameFrame extends JFrame {
                 JPanel diffPanel = new DifficultyPanel(() -> cardLayout.show(cardPanel, "menu"));
                 replaceCard("difficulty", diffPanel);
                 cardLayout.show(cardPanel, "difficulty");
+                MusicManager.update(MusicManager.Screen.MAIN_MENU);
+            }
+            case "leaderboard" -> {
+                LeaderboardPanel lb = new LeaderboardPanel(() -> {
+                    cardLayout.show(cardPanel, "menu");
+                    MusicManager.update(MusicManager.Screen.MAIN_MENU);
+                });
+                replaceCard("leaderboard", lb);
+                cardLayout.show(cardPanel, "leaderboard");
                 MusicManager.update(MusicManager.Screen.MAIN_MENU);
             }
             case "settings" -> {
@@ -233,24 +250,21 @@ public class GameFrame extends JFrame {
         cardPanel.add(newPanel, cardName);
     }
 
-    private void showGameCardExact() {
-        cardLayout.show(cardPanel, "game");
-
-        // Make sure layout has updated before reading insets
-        cardPanel.revalidate();
-        cardPanel.repaint();
-
-        // Force content area to be EXACTLY the game board size
+    private void setFrameToBoardSize() {
         Insets insets = getInsets();
         int frameW = GameConfig.SCREEN_WIDTH + insets.left + insets.right;
         int frameH = GameConfig.SCREEN_HEIGHT + insets.top + insets.bottom;
 
         setSize(frameW, frameH);
         setLocationRelativeTo(null);
+    }
 
-        // Ensure GamePanel actually gets the size immediately
+    private void showGameCardExact() {
+        cardLayout.show(cardPanel, "game");
+        cardPanel.revalidate();
+        cardPanel.repaint();
+        setFrameToBoardSize();
         cardPanel.doLayout();
-
         gamePanel.requestFocusInWindow();
     }
 
