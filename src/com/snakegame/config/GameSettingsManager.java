@@ -9,11 +9,13 @@ import java.util.logging.Logger;
 
 import com.snakegame.ai.AiMode;
 import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapManager;
 import com.snakegame.model.GameConfig;
+import com.snakegame.util.AppPaths;
 
 
 public class GameSettingsManager {
-    private static final String FILE_PATH = "data/settings.txt";
+    private static final String FILE_PATH = AppPaths.SETTINGS_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSettingsManager.class.getName());
 
     public static void load() {
@@ -28,72 +30,89 @@ public class GameSettingsManager {
             Properties props = new Properties();
             props.load(reader);
 
-            String playerIdValue = props.getProperty("playerId", "");
-            if (playerIdValue != null && !playerIdValue.isBlank()) {
-                try {
-                    GameSettings.setPlayerId(java.util.UUID.fromString(playerIdValue));
-                } catch (IllegalArgumentException e) {
+            GameSettings.withAutosaveSuppressed(() -> {
+                String playerIdValue = props.getProperty("playerId", "");
+                if (playerIdValue != null && !playerIdValue.isBlank()) {
+                    try {
+                        GameSettings.setPlayerId(java.util.UUID.fromString(playerIdValue));
+                    } catch (IllegalArgumentException e) {
+                        GameSettings.ensurePlayerId();
+                    }
+                } else {
                     GameSettings.ensurePlayerId();
                 }
-            } else {
-                GameSettings.ensurePlayerId();
-            }
 
-            GameSettings.setDifficultyLevel(
-                    Integer.parseInt(props.getProperty("difficultyLevel", "20"))
-            );
-            GameSettings.setObstaclesEnabled(
-                    Boolean.parseBoolean(props.getProperty("obstaclesEnabled", "false"))
-            );
-
-            GameSettings.setCurrentMode(
-                    GameMode.valueOf(props.getProperty("currentMode", "STANDARD"))
-            );
-            GameSettings.setSelectedMapId(
-                    Integer.parseInt(props.getProperty("selectedMapId", "1"))
-            );
-            GameSettings.setRaceThreshold(
-                    Integer.parseInt(props.getProperty("raceThreshold", "20"))
-            );
-
-            // Load new settings
-            GameSettings.setSoundEnabled(
-                    Boolean.parseBoolean(props.getProperty("soundEnabled", "true"))
-            );
-            GameSettings.setMusicEnabled(
-                    Boolean.parseBoolean(props.getProperty("musicEnabled", "true"))
-            );
-            GameSettings.setShowGrid(
-                    Boolean.parseBoolean(props.getProperty("showGrid", "true"))
-            );
-            GameSettings.setPlayerName(
-                    props.getProperty("playerName", "Player")
-            );
-
-            try {
-                GameSettings.setSelectedTheme(
-                        GameSettings.Theme.valueOf(props.getProperty("theme", "RETRO"))
+                GameSettings.setDifficultyLevel(
+                        Integer.parseInt(props.getProperty("difficultyLevel", "20"))
                 );
-            } catch (IllegalArgumentException e) {
-                GameSettings.setSelectedTheme(GameSettings.Theme.RETRO);
-            }
+                GameSettings.setObstaclesEnabled(
+                        Boolean.parseBoolean(props.getProperty("obstaclesEnabled", "false"))
+                );
 
-            GameSettings.setMovingObstaclesEnabled(
-                    Boolean.parseBoolean(props.getProperty("movingObstaclesEnabled", "false"))
-            );
-            GameSettings.setMovingObstacleCount(
-                    Integer.parseInt(props.getProperty("movingObstacleCount",
-                            String.valueOf(GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT)))
-            );
-            GameSettings.setMovingObstaclesAutoIncrement(
-                    Boolean.parseBoolean(props.getProperty("movingObstaclesAutoIncrement", "false"))
-            );
+                GameSettings.setCurrentMode(
+                        GameMode.valueOf(props.getProperty("currentMode", "STANDARD"))
+                );
+                GameSettings.setSelectedMapId(
+                        Integer.parseInt(props.getProperty("selectedMapId", "1"))
+                );
+                GameSettings.setRaceThreshold(
+                        Integer.parseInt(props.getProperty("raceThreshold", "20"))
+                );
 
-            try {
-                GameSettings.setAiMode(AiMode.valueOf(props.getProperty("aiMode", "SAFE")));
-            } catch (IllegalArgumentException ex) {
-                GameSettings.setAiMode(AiMode.SAFE);
-            }
+                // Load new settings
+                GameSettings.setSoundEnabled(
+                        Boolean.parseBoolean(props.getProperty("soundEnabled", "true"))
+                );
+                GameSettings.setMusicEnabled(
+                        Boolean.parseBoolean(props.getProperty("musicEnabled", "true"))
+                );
+                GameSettings.setShowGrid(
+                        Boolean.parseBoolean(props.getProperty("showGrid", "true"))
+                );
+                GameSettings.setPlayerName(
+                        props.getProperty("playerName", "Player")
+                );
+
+                try {
+                    GameSettings.setSelectedTheme(
+                            GameSettings.Theme.valueOf(props.getProperty("theme", "RETRO"))
+                    );
+                } catch (IllegalArgumentException e) {
+                    GameSettings.setSelectedTheme(GameSettings.Theme.RETRO);
+                }
+
+                GameSettings.setMovingObstaclesEnabled(
+                        Boolean.parseBoolean(props.getProperty("movingObstaclesEnabled", "false"))
+                );
+                GameSettings.setMovingObstacleCount(
+                        Integer.parseInt(props.getProperty("movingObstacleCount",
+                                String.valueOf(GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT)))
+                );
+                GameSettings.setMovingObstaclesAutoIncrement(
+                        Boolean.parseBoolean(props.getProperty("movingObstaclesAutoIncrement", "false"))
+                );
+
+                try {
+                    GameSettings.setAiMode(AiMode.valueOf(props.getProperty("aiMode", "SAFE")));
+                } catch (IllegalArgumentException ex) {
+                    GameSettings.setAiMode(AiMode.SAFE);
+                }
+
+                // Developer mode is session-only. If settings point to a developer-only map while dev mode is locked,
+                // sanitize to a normal playable configuration so Continue/save flow behaves as expected.
+                if (!GameSettings.isDeveloperModeEnabled()) {
+                    int mapId = GameSettings.getSelectedMapId();
+                    if (mapId > 0 && !MapManager.isPackagedMapId(mapId)) {
+                        GameSettings.setSelectedMapId(1);
+                        if (GameSettings.getCurrentMode() == GameMode.MAP_SELECT) {
+                            GameSettings.setCurrentMode(GameMode.STANDARD);
+                        }
+                    }
+                }
+            });
+
+            // Persist once (normalizes missing/invalid values like UUID).
+            GameSettingsManager.save();
 
         } catch (IOException | NumberFormatException e) {
             log.log(Level.SEVERE, "Failed to load settings", e);

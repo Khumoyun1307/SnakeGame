@@ -55,7 +55,7 @@ public class GameSnapshot implements Serializable {
 
         s.settingsSnapshot = GameSettings.snapshot();
         s.mode = GameSettings.getCurrentMode();
-        s.selectedMapId = GameSettings.getSelectedMapId();
+        s.selectedMapId = state.getCurrentMapId();
 
         s.score = state.getScore();
         s.applesEaten = state.getApplesEaten();

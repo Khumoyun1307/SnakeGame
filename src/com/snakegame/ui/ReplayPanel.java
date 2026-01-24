@@ -38,32 +38,37 @@ public class ReplayPanel extends JPanel {
         setBackground(Color.BLACK);
 
         // ----- Top controls -----
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
+        JPanel top = new JPanel(new GridBagLayout());
         top.setBackground(Color.DARK_GRAY);
+        top.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
-        JButton back = new JButton("⬅ Back");
+        JButton back = new JButton("Back");
+        back.setMargin(new Insets(2, 8, 2, 8));
         back.addActionListener(e -> {
             onHide();              // stop replay cleanly
             this.backToMenu.run(); // go back
         });
 
         replaySelect = new JComboBox<>(new String[]{"Last Game", "Best Game"});
+        replaySelect.setPrototypeDisplayValue("Best Game");
         replaySelect.addActionListener(this::onReplaySelected);
 
-        playPauseBtn = new JButton("▶ Play");
+        playPauseBtn = new JButton("Play");
+        playPauseBtn.setMargin(new Insets(2, 10, 2, 10));
         playPauseBtn.addActionListener(e -> togglePlayPause());
 
-        stepBtn = new JButton("⏭ Step");
+        stepBtn = new JButton("Step");
+        stepBtn.setMargin(new Insets(2, 10, 2, 10));
         stepBtn.addActionListener(e -> {
             if (controller != null) controller.stepOnce();
         });
 
-        restartBtn = new JButton("⟲ Restart");
+        restartBtn = new JButton("Restart");
+        restartBtn.setMargin(new Insets(2, 10, 2, 10));
         restartBtn.addActionListener(e -> reloadCurrent());
 
         speedSlider = new JSlider(25, 300, 100); // 0.25x .. 3.0x
-        speedSlider.setPreferredSize(new Dimension(180, 40));
-        speedSlider.setToolTipText("Replay Speed");
+        speedSlider.setToolTipText("Speed");
         speedSlider.addChangeListener(e -> {
             if (controller != null) {
                 double mult = speedSlider.getValue() / 100.0;
@@ -71,14 +76,35 @@ public class ReplayPanel extends JPanel {
             }
         });
 
-        top.add(back);
-        top.add(new JLabel("Replay:"));
-        top.add(replaySelect);
-        top.add(playPauseBtn);
-        top.add(stepBtn);
-        top.add(restartBtn);
-        top.add(new JLabel("Speed"));
-        top.add(speedSlider);
+        JPanel speedPanel = new JPanel(new BorderLayout());
+        speedPanel.setOpaque(false);
+        speedPanel.setBorder(BorderFactory.createTitledBorder("Speed"));
+        speedPanel.add(speedSlider, BorderLayout.CENTER);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 6, 0, 6);
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.NONE;
+
+        gbc.gridx = 0;
+        top.add(back, gbc);
+
+        gbc.gridx = 1;
+        top.add(replaySelect, gbc);
+
+        gbc.gridx = 2;
+        top.add(playPauseBtn, gbc);
+
+        gbc.gridx = 3;
+        top.add(stepBtn, gbc);
+
+        gbc.gridx = 4;
+        top.add(restartBtn, gbc);
+
+        gbc.gridx = 5;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        top.add(speedPanel, gbc);
 
         add(top, BorderLayout.NORTH);
 
@@ -109,7 +135,7 @@ public class ReplayPanel extends JPanel {
      */
     public void onShow() {
         reloadCurrent();                 // ALWAYS start from beginning of selected replay
-        playPauseBtn.setText("▶ Play");  // reset button
+        playPauseBtn.setText("Play");  // reset button
     }
 
     /**
@@ -117,7 +143,7 @@ public class ReplayPanel extends JPanel {
      */
     public void onHide() {
         stopIfRunning();
-        playPauseBtn.setText("▶ Play");
+        playPauseBtn.setText("Play");
     }
 
     private void stopIfRunning() {
@@ -143,7 +169,7 @@ public class ReplayPanel extends JPanel {
         if (opt.isEmpty()) {
             state = null;
             replaySettings = null;
-            playPauseBtn.setText("▶ Play");
+            playPauseBtn.setText("Play");
             JOptionPane.showMessageDialog(this, "No replay found for this selection.");
             gameCanvas.repaint();
             return;
@@ -152,21 +178,21 @@ public class ReplayPanel extends JPanel {
         ReplayData data = opt.get();
 
         // WATCH-ONLY: do NOT restore global GameSettings. Keep snapshot local.
-        replaySettings = data.settingsSnapshot;
+        replaySettings = data.runSettingsSnapshot;
 
         // Fresh deterministic state => prevents "Game Over persists" and stale state  
-        state = new GameState(data.seed, true, data.settingsSnapshot);
+        state = new GameState(data.seed, true, replaySettings);
         // Tick speed should match the run (from snapshot) without mutating session settings
-        int baseDelay = (data.settingsSnapshot != null)
-                ? GameSettings.speedDelayFromDifficultyLevel(data.settingsSnapshot.difficultyLevel())
+        int baseDelay = (replaySettings != null)
+                ? GameSettings.speedDelayFromDifficultyLevel(replaySettings.difficultyLevel())
                 : GameSettings.getSpeedDelayFromDifficultyLevel();
 
         state.setTickMs(baseDelay);
 
-        controller = new ReplayController(state, data.events, gameCanvas::repaint);
+        controller = new ReplayController(state, baseDelay, data.events, gameCanvas::repaint);
         controller.setSpeedMultiplier(speedSlider.getValue() / 100.0);
 
-        playPauseBtn.setText("▶ Play");
+        playPauseBtn.setText("Play");
         gameCanvas.repaint();
     }
 
@@ -175,10 +201,14 @@ public class ReplayPanel extends JPanel {
 
         if (controller.isPlaying()) {
             controller.pause();
-            playPauseBtn.setText("▶ Play");
+            playPauseBtn.setText("Play");
         } else {
             controller.play();
-            playPauseBtn.setText("⏸ Pause");
+            playPauseBtn.setText("Pause");
         }
     }
 }
+
+
+
+

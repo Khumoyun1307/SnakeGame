@@ -4,6 +4,7 @@ import com.snakegame.controller.GameController;
 import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameSnapshot;
 import com.snakegame.model.GameState;
+import com.snakegame.sound.MusicManager;
 import com.snakegame.util.ProgressManager;
 
 import javax.swing.*;
@@ -41,6 +42,7 @@ public class GamePanel extends JPanel {
             initGame();
             repaint();
             requestFocusInWindow();
+            MusicManager.update(MusicManager.Screen.GAMEPLAY);
             controller.start();
         });
 

@@ -10,12 +10,13 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import com.snakegame.util.AppPaths;
 
 public class ReplayManager {
     private static final Logger log = Logger.getLogger(ReplayManager.class.getName());
 
-    private static final String LAST_PATH = "data/replay_last.txt";
-    private static final String BEST_PATH = "data/replay_best.txt";
+    private static final String LAST_PATH = AppPaths.REPLAY_LAST_FILE.toString();
+    private static final String BEST_PATH = AppPaths.REPLAY_BEST_FILE.toString();
 
     public static boolean hasLast() { return new File(LAST_PATH).exists(); }
     public static boolean hasBest() { return new File(BEST_PATH).exists(); }
@@ -35,7 +36,7 @@ public class ReplayManager {
     // ---------------- IO ----------------
 
     private static void save(String path, ReplayData data) {
-        if (data == null || data.settingsSnapshot == null) return;
+        if (data == null || data.runSettingsSnapshot == null) return;
 
         File file = new File(path);
         File parent = file.getParentFile();
@@ -45,13 +46,14 @@ public class ReplayManager {
         }
 
         Properties p = new Properties();
-        p.setProperty("version", "1");
+        p.setProperty("version", String.valueOf(ReplayData.CURRENT_VERSION));
         p.setProperty("savedAtMillis", String.valueOf(System.currentTimeMillis()));
         p.setProperty("seed", String.valueOf(data.seed));
         p.setProperty("finalScore", String.valueOf(data.finalScore));
+        p.setProperty("startMapId", String.valueOf(data.startMapId));
 
         // Flatten SettingsSnapshot (same fields order as your snapshot constructor)
-        SettingsSnapshot s = data.settingsSnapshot;
+        SettingsSnapshot s = data.runSettingsSnapshot;
         p.setProperty("difficultyLevel", String.valueOf(s.difficultyLevel()));
         p.setProperty("obstaclesEnabled", String.valueOf(s.obstaclesEnabled()));
         p.setProperty("currentMode", s.currentMode().name());
@@ -66,7 +68,6 @@ public class ReplayManager {
         p.setProperty("movingObstaclesEnabled", String.valueOf(s.movingObstaclesEnabled()));
         p.setProperty("movingObstacleCount", String.valueOf(s.movingObstacleCount()));
         p.setProperty("movingObstaclesAutoIncrement", String.valueOf(s.movingObstaclesAutoIncrement()));
-        p.setProperty("developerModeEnabled", String.valueOf(s.developerModeEnabled()));
 
         // Encode events: tick:DIR;tick:DIR;...
         p.setProperty("events", encodeEvents(data.events));
@@ -92,6 +93,7 @@ public class ReplayManager {
 
         try {
             ReplayData d = new ReplayData();
+            d.version = Integer.parseInt(p.getProperty("version", "1"));
             d.seed = Long.parseLong(p.getProperty("seed", "0"));
             d.finalScore = Integer.parseInt(p.getProperty("finalScore", "0"));
 
@@ -122,9 +124,10 @@ public class ReplayManager {
                     Boolean.parseBoolean(p.getProperty("movingObstaclesEnabled", "false")),
                     Integer.parseInt(p.getProperty("movingObstacleCount", "0")),
                     Boolean.parseBoolean(p.getProperty("movingObstaclesAutoIncrement", "false")),
-                    Boolean.parseBoolean(p.getProperty("developerModeEnabled", "false"))
+                    false
             );
-            d.settingsSnapshot = ss;
+            d.runSettingsSnapshot = ss;
+            d.startMapId = Integer.parseInt(p.getProperty("startMapId", String.valueOf(ss.selectedMapId())));
 
             d.events = decodeEvents(p.getProperty("events", ""));
 

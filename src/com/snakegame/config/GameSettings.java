@@ -10,6 +10,7 @@ public class GameSettings {
     public enum Theme { RETRO, NEON, PIXEL_ART }
 
     private static AiMode aiMode = AiMode.SAFE;
+    private static boolean autosaveEnabled = true;
 
     private static final int BEGINNER_DELAY = 180;
     private static final double DIFFICULTY_CONVERSION_MULTIPLIER = 2.4;
@@ -36,8 +37,24 @@ public class GameSettings {
 
     private static boolean developerModeEnabled = false;
 
+    public static void withAutosaveSuppressed(Runnable action) {
+        boolean prev = autosaveEnabled;
+        autosaveEnabled = false;
+        try {
+            action.run();
+        } finally {
+            autosaveEnabled = prev;
+        }
+    }
+
+    private static void saveIfEnabled() {
+        if (autosaveEnabled) {
+            GameSettingsManager.save();
+        }
+    }
+
     public static Difficulty getDifficulty() { return difficulty; }
-    public static void setDifficulty(Difficulty d) { difficulty = d; GameSettingsManager.save(); }
+    public static void setDifficulty(Difficulty d) { difficulty = d; saveIfEnabled(); }
 
     public static int getDifficultyLevel() { return difficultyLevel; }
 
@@ -52,13 +69,13 @@ public class GameSettings {
         else if (difficultyLevel < 50) difficulty = Difficulty.EXPERT; // Expert
         else difficulty = Difficulty.INSANE;                           // Insane
 
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isObstaclesEnabled() { return obstaclesEnabled; }
     public static void setObstaclesEnabled(boolean enabled) {
         obstaclesEnabled = enabled;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static GameMode getCurrentMode() { return currentMode; }
@@ -67,44 +84,44 @@ public class GameSettings {
             mode = GameMode.STANDARD;
         }
         currentMode = mode;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static int getSelectedMapId() { return selectedMapId; }
     public static void setSelectedMapId(int id) {
         selectedMapId = id;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static int getRaceThreshold() { return raceThreshold; }
     public static void setRaceThreshold(int threshold) {
         raceThreshold = threshold;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isSoundEnabled() { return soundEnabled; }
     public static void setSoundEnabled(boolean enabled) {
         soundEnabled = enabled;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isMusicEnabled() { return musicEnabled; }
     public static void setMusicEnabled(boolean enabled) {
         musicEnabled = enabled;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isShowGrid() { return showGrid; }
     public static void setShowGrid(boolean show) {
         showGrid = show;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static String getPlayerName() { return playerName; }
     public static void setPlayerName(String name) {
         if (name != null && !name.isEmpty()) {
             playerName = name;
-            GameSettingsManager.save();
+            saveIfEnabled();
         }
     }
 
@@ -112,7 +129,7 @@ public class GameSettings {
     public static void setPlayerId(UUID id) {
         if (id != null) {
             playerId = id;
-            GameSettingsManager.save();
+            saveIfEnabled();
         }
     }
 
@@ -135,25 +152,25 @@ public class GameSettings {
     public static Theme getSelectedTheme() { return selectedTheme; }
     public static void setSelectedTheme(Theme theme) {
         selectedTheme = theme;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isMovingObstaclesEnabled() { return movingObstaclesEnabled; }
     public static void setMovingObstaclesEnabled(boolean enabled) {
         movingObstaclesEnabled = enabled;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static int getMovingObstacleCount() { return movingObstacleCount; }
     public static void setMovingObstacleCount(int count) {
         movingObstacleCount = Math.max(0, Math.min(GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT, count));
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isMovingObstaclesAutoIncrement() { return movingObstaclesAutoIncrement; }
     public static void setMovingObstaclesAutoIncrement(boolean auto) {
         movingObstaclesAutoIncrement = auto;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 
     public static boolean isDeveloperModeEnabled() { return developerModeEnabled; }
@@ -175,7 +192,7 @@ public class GameSettings {
                 movingObstaclesEnabled,
                 movingObstacleCount,
                 movingObstaclesAutoIncrement,
-                developerModeEnabled
+                false
         );
     }
 
@@ -194,13 +211,12 @@ public class GameSettings {
         movingObstaclesEnabled       = s.movingObstaclesEnabled();
         movingObstacleCount          = s.movingObstacleCount();
         movingObstaclesAutoIncrement = s.movingObstaclesAutoIncrement();
-        developerModeEnabled         = s.developerModeEnabled();
     }
 
     public static AiMode getAiMode() { return aiMode; }
     public static void setAiMode(AiMode mode) {
         if (mode == null) mode = AiMode.SAFE;
         aiMode = mode;
-        GameSettingsManager.save();
+        saveIfEnabled();
     }
 }

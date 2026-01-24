@@ -1,6 +1,7 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.config.GameSettingsManager;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -113,11 +114,14 @@ public class SettingsPanel extends JPanel {
     private JButton getSaveJButton() {
         JButton save = new JButton("✔ Save");
         save.addActionListener(e -> {
-            GameSettings.setPlayerName(nameField.getText().trim());
-            GameSettings.setSoundEnabled(soundCheck.isSelected());
-            GameSettings.setMusicEnabled(musicCheck.isSelected());
-            GameSettings.setShowGrid(gridCheck.isSelected());
-            GameSettings.setSelectedTheme((GameSettings.Theme)themeCombo.getSelectedItem());
+            GameSettings.withAutosaveSuppressed(() -> {
+                GameSettings.setPlayerName(nameField.getText().trim());
+                GameSettings.setSoundEnabled(soundCheck.isSelected());
+                GameSettings.setMusicEnabled(musicCheck.isSelected());
+                GameSettings.setShowGrid(gridCheck.isSelected());
+                GameSettings.setSelectedTheme((GameSettings.Theme)themeCombo.getSelectedItem());
+            });
+            GameSettingsManager.save();
 
             boolean nowMusicOn;
             boolean nowSoundOn;

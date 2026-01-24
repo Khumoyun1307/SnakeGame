@@ -4,8 +4,11 @@ import com.snakegame.config.GameSettings;
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BackgroundMusicPlayer {
+    private static final Logger log = Logger.getLogger(BackgroundMusicPlayer.class.getName());
     private static Clip clip;
 
     /**
@@ -29,7 +32,7 @@ public class BackgroundMusicPlayer {
             if (loop) clip.loop(Clip.LOOP_CONTINUOUSLY);
             else clip.start();
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to play background music: " + fileName, e);
         }
     }
 

@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    env:
+      JUNIT_PLATFORM_VERSION: "1.8.1"
+      JACOCO_VERSION: "0.8.11"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache CI jars
+        uses: actions/cache@v4
+        with:
+          path: .ci-lib
+          key: ci-lib-junit-${{ env.JUNIT_PLATFORM_VERSION }}-jacoco-${{ env.JACOCO_VERSION }}
+
+      - name: Download CI jars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .ci-lib
+
+          download_if_missing() {
+            local url="$1"
+            local dest="$2"
+            if [[ -f "$dest" ]]; then
+              return 0
+            fi
+            echo "Downloading $url"
+            curl -fsSL "$url" -o "$dest"
+          }
+
+          download_if_missing \
+            "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/${JUNIT_PLATFORM_VERSION}/junit-platform-console-standalone-${JUNIT_PLATFORM_VERSION}.jar" \
+            ".ci-lib/junit-platform-console-standalone.jar"
+
+          download_if_missing \
+            "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.agent/${JACOCO_VERSION}/org.jacoco.agent-${JACOCO_VERSION}-runtime.jar" \
+            ".ci-lib/jacocoagent.jar"
+
+          download_if_missing \
+            "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.cli/${JACOCO_VERSION}/org.jacoco.cli-${JACOCO_VERSION}-nodeps.jar" \
+            ".ci-lib/jacococli.jar"
+
+      - name: Compile production
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ci-out/classes
+          find src -name '*.java' > ci-out/sources.txt
+          javac --release 17 -encoding UTF-8 -d ci-out/classes @ci-out/sources.txt
+
+      - name: Compile tests (if any)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ci-out/test-classes
+
+          if find test -name '*.java' -print -quit | grep -q .; then
+            find test -name '*.java' > ci-out/test-sources.txt
+            javac --release 17 -encoding UTF-8 \
+              -cp "ci-out/classes:.ci-lib/junit-platform-console-standalone.jar" \
+              -d ci-out/test-classes \
+              @ci-out/test-sources.txt
+          else
+            echo "No tests found under test/; skipping test compilation."
+          fi
+
+      - name: Run tests (isolated working dir)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ci-work
+
+          pushd ci-work >/dev/null
+          java -Djava.awt.headless=true \
+            -javaagent:../.ci-lib/jacocoagent.jar=destfile=../ci-out/jacoco.exec,append=false \
+            -jar ../.ci-lib/junit-platform-console-standalone.jar \
+            --class-path "../ci-out/classes:../ci-out/test-classes:../resources" \
+            --scan-class-path \
+            --include-classname ".*Test" \
+            --reports-dir "../ci-out/test-reports"
+          popd >/dev/null
+
+      - name: JaCoCo report
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "ci-out/jacoco.exec" ]]; then
+            mkdir -p ci-out/coverage
+            java -jar .ci-lib/jacococli.jar report ci-out/jacoco.exec \
+              --classfiles ci-out/classes \
+              --sourcefiles src \
+              --html ci-out/coverage/html \
+              --xml ci-out/coverage/jacoco.xml \
+              --name "SnakeGame"
+          else
+            echo "No ci-out/jacoco.exec found; skipping JaCoCo report."
+          fi
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: ci-out/test-reports
+          if-no-files-found: warn
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: ci-out/coverage
+          if-no-files-found: warn
+

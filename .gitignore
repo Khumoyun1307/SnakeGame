@@ -36,4 +36,8 @@ output/
 runtime-windows/
 dist/
 
+### CI artifacts
+.ci-lib/
+ci-out/
+ci-work/
 

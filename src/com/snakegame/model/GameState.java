@@ -5,8 +5,6 @@ import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.mode.MapConfig;
 import com.snakegame.mode.MapManager;
-import com.snakegame.sound.SoundPlayer;
-import com.snakegame.util.ProgressManager;
 
 import java.awt.*;
 import java.util.*;
@@ -33,8 +31,16 @@ public class GameState {
     private final List<Point> obstacles = new ArrayList<>();
     private final boolean watchOnly;
 
-    // NEW: when watchOnly replay, use this snapshot instead of global GameSettings.
-    private final SettingsSnapshot settingsOverride;
+    /**
+     * Snapshot of gameplay-relevant settings captured at the start of a run.
+     * For watch-only replays, this comes from the replay file.
+     */
+    private SettingsSnapshot runSettingsSnapshot;
+
+    /** Current map id for MAP_SELECT/RACE (must advance even in watch-only replays). */
+    private int currentMapId;
+
+    private final List<GameEvent> pendingEvents = new ArrayList<>();
 
     // Unlock notification (tick-based)
     private String unlockMessage = null;
@@ -46,6 +52,7 @@ public class GameState {
     // Deterministic clock
     private int tickMs = 100; // set by controller at start
     private long tick = 0;    // increments each update()
+    private long elapsedSimTimeMs = 0;
 
     // Deterministic RNG
     private final Random rng;
@@ -55,11 +62,11 @@ public class GameState {
         this(seed, watchOnly, null);
     }
 
-    // ✅ NEW: replay constructor should pass settingsSnapshot here
-    public GameState(long seed, boolean watchOnly, SettingsSnapshot settingsOverride) {
+    public GameState(long seed, boolean watchOnly, SettingsSnapshot runSettingsSnapshot) {
         this.seed = seed;
         this.watchOnly = watchOnly;
-        this.settingsOverride = settingsOverride;
+        this.runSettingsSnapshot = (runSettingsSnapshot != null) ? runSettingsSnapshot : GameSettings.snapshot();
+        this.currentMapId = this.runSettingsSnapshot.selectedMapId();
         this.rng = new Random(seed);
         initGame();
     }
@@ -73,41 +80,34 @@ public class GameState {
         this(System.nanoTime(), false, null);
     }
 
-    // ---------- Settings accessors (snapshot-first for watchOnly) ----------
+    // ---------- Settings accessors (frozen at run start) ----------
 
     private GameMode currentMode() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.currentMode()
-                : GameSettings.getCurrentMode();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.currentMode() : GameSettings.getCurrentMode();
     }
 
     private int selectedMapId() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.selectedMapId()
-                : GameSettings.getSelectedMapId();
+        return currentMapId;
     }
 
     private int raceThreshold() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.raceThreshold()
-                : GameSettings.getRaceThreshold();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.raceThreshold() : GameSettings.getRaceThreshold();
     }
 
     private boolean obstaclesEnabled() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.obstaclesEnabled()
-                : GameSettings.isObstaclesEnabled();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.obstaclesEnabled() : GameSettings.isObstaclesEnabled();
     }
 
     private boolean movingObstaclesEnabled() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.movingObstaclesEnabled()
-                : GameSettings.isMovingObstaclesEnabled();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.movingObstaclesEnabled() : GameSettings.isMovingObstaclesEnabled();
     }
 
     private int movingObstacleCount() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.movingObstacleCount()
-                : GameSettings.getMovingObstacleCount();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.movingObstacleCount() : GameSettings.getMovingObstacleCount();
     }
 
     private boolean movingObstaclesAutoIncrement() {
-        return (watchOnly && settingsOverride != null) ? settingsOverride.movingObstaclesAutoIncrement()
-                : GameSettings.isMovingObstaclesAutoIncrement();
+        return runSettingsSnapshot != null ? runSettingsSnapshot.movingObstaclesAutoIncrement() : GameSettings.isMovingObstaclesAutoIncrement();
     }
 
     // ---------------------------------------------------------------------
@@ -149,9 +149,6 @@ public class GameState {
             int mapId = selectedMapId();
             MapConfig cfg = MapManager.getMap(mapId);
             if (cfg != null) obstacles.addAll(cfg.getObstacles());
-            if (!watchOnly) {
-                ProgressManager.unlockMap(mapId);
-            }
         }
 
         resetSnakeAndApple();
@@ -225,13 +222,19 @@ public class GameState {
     public void update() {
         if (!running) return;
 
+        pendingEvents.clear();
+
         tick++;
+        elapsedSimTimeMs += tickMs;
 
         updateEffects();
         updateNotifications();
 
         movingObstacles.forEach(MovingObstacle::update);
-        if (!checkMovingObstacleCollision()) return;
+        if (!checkMovingObstacleCollision()) {
+            pendingEvents.add(new GameEvent.GameOver(score));
+            return;
+        }
 
         boolean ateApple = snake.getHead().equals(apple.getPosition());
         AppleType type = apple.getType();
@@ -262,7 +265,7 @@ public class GameState {
 
         if (ateApple) {
             applesEaten++;
-            SoundPlayer.play("eatApple.wav");
+            pendingEvents.add(new GameEvent.AppleEaten(type));
 
             int baseScore = type.getScoreValue();
             score += doubleScoreActive ? baseScore * 2 : baseScore;
@@ -285,10 +288,9 @@ public class GameState {
                 MapConfig nextCfg = MapManager.getMap(nextMap);
 
                 if (nextCfg != null) {
-                    if (!watchOnly) {
-                        GameSettings.setSelectedMapId(nextMap);
-                        ProgressManager.unlockMap(nextMap);
-                    }
+                    // Advance map id even in watch-only replay.
+                    currentMapId = nextMap;
+                    pendingEvents.add(new GameEvent.MapAdvanced(nextMap));
 
                     obstacles.clear();
                     obstacles.addAll(nextCfg.getObstacles());
@@ -305,6 +307,9 @@ public class GameState {
         }
 
         checkCollision();
+        if (!running) {
+            pendingEvents.add(new GameEvent.GameOver(score));
+        }
     }
 
     private MovingObstacle createSafeMovingObstacle(Rectangle playArea, Point head) {
@@ -400,6 +405,14 @@ public class GameState {
     public List<Point> getObstacles() { return obstacles; }
     public String getUnlockMessage() { return unlockMessage; }
     public List<MovingObstacle> getMovingObstacles() { return movingObstacles; }
+    public int getCurrentMapId() { return currentMapId; }
+    public SettingsSnapshot getRunSettingsSnapshot() { return runSettingsSnapshot; }
+    public List<GameEvent> consumeEvents() {
+        if (pendingEvents.isEmpty()) return List.of();
+        List<GameEvent> out = new ArrayList<>(pendingEvents);
+        pendingEvents.clear();
+        return out;
+    }
 
     public void setDirection(Direction direction) { snake.setDirection(direction); }
 
@@ -407,11 +420,21 @@ public class GameState {
 
     public int getApplesEaten() { return applesEaten; }
     public int getTickMs() { return tickMs; }
+    public long getElapsedSimTimeMs() { return elapsedSimTimeMs; }
 
     public void restore(GameSnapshot snap) {
+        if (snap.settingsSnapshot != null) {
+            GameSettings.restore(snap.settingsSnapshot);
+        }
+        // Snapshot may contain an older selectedMapId; the GameSnapshot field is authoritative for continues.
         GameSettings.setCurrentMode(snap.mode);
         GameSettings.setSelectedMapId(snap.selectedMapId);
-        GameSettings.restore(snap.settingsSnapshot);
+
+        // Align this instance's frozen run settings with the loaded snapshot.
+        if (snap.settingsSnapshot != null) {
+            this.runSettingsSnapshot = snap.settingsSnapshot;
+        }
+        this.currentMapId = snap.selectedMapId;
 
         this.score = snap.score;
         this.applesEaten = snap.applesEaten;
@@ -445,5 +468,6 @@ public class GameState {
 
         this.running = true;
         this.unlockMessage = null;
+        this.elapsedSimTimeMs = 0;
     }
 }

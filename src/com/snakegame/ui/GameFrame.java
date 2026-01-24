@@ -2,6 +2,7 @@ package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapManager;
 import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameSnapshot;
 import com.snakegame.sound.BackgroundMusicPlayer;
@@ -79,8 +80,15 @@ public class GameFrame extends JFrame {
         setFrameToBoardSize();          // sets frame to board size
         cardLayout.show(cardPanel, "menu"); // then show menu inside same frame
         this.setLocationRelativeTo(null);
-        ImageIcon icon = new ImageIcon("resources/snake_icon.png"); // your icon path
-        this.setIconImage(icon.getImage());
+        java.net.URL iconUrl = GameFrame.class.getResource("/snake_icon.png");
+        if (iconUrl != null) {
+            ImageIcon icon = new ImageIcon(iconUrl);
+            this.setIconImage(icon.getImage());
+        } else {
+            // Fallback for IDE runs where resources may not be on the classpath.
+            ImageIcon icon = new ImageIcon("resources/snake_icon.png");
+            this.setIconImage(icon.getImage());
+        }
         this.setVisible(true);
         MusicManager.update(MusicManager.Screen.MAIN_MENU);
         gamePanel.requestFocusInWindow();
@@ -90,12 +98,18 @@ public class GameFrame extends JFrame {
     private void handleMenuAction(ActionEvent e) {
         switch (e.getActionCommand()) {
             case "play" -> {
-                if (GameSettings.getCurrentMode() == GameMode.AI || GameSettings.getCurrentMode() == GameMode.RACE){
+                // "Play" starts STANDARD unless the user explicitly chose MAP_SELECT in the map menu.
+                // (AI/RACE have their own menu entries and should not "stick" to the Play button.)
+                if (GameSettings.getCurrentMode() == GameMode.AI || GameSettings.getCurrentMode() == GameMode.RACE) {
+                    GameSettings.setCurrentMode(GameMode.MAP_SELECT);
+                }
+
+                // Prevent developer-only map selections leaking into normal play.
+                if (!GameSettings.isDeveloperModeEnabled()) {
                     int mapId = GameSettings.getSelectedMapId();
-                    if (mapId >= 1) {
-                        GameSettings.setCurrentMode(GameMode.MAP_SELECT);
-                    } else {
-                        GameSettings.setCurrentMode(GameMode.STANDARD);
+                    if (mapId > 0 && !MapManager.isPackagedMapId(mapId)) {
+                        GameSettings.setSelectedMapId(1);
+                        if (GameSettings.getCurrentMode() != GameMode.STANDARD) GameSettings.setCurrentMode(GameMode.STANDARD);
                     }
                 }
 

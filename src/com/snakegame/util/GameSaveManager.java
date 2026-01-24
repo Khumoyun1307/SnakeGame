@@ -16,7 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GameSaveManager {
-    private static final String FILE_PATH = "data/savegame.txt";
+    private static final String FILE_PATH = AppPaths.SAVE_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSaveManager.class.getName());
 
     public static boolean hasSave() {
@@ -50,8 +50,8 @@ public class GameSaveManager {
         if (ss != null) {
             p.setProperty("difficultyLevel", String.valueOf(ss.difficultyLevel()));
             p.setProperty("obstaclesEnabled", String.valueOf(ss.obstaclesEnabled()));
-            p.setProperty("currentMode", ss.currentMode().name());
-            p.setProperty("selectedMapId", String.valueOf(ss.selectedMapId()));
+            p.setProperty("currentMode", (s.mode != null ? s.mode.name() : ss.currentMode().name()));
+            p.setProperty("selectedMapId", String.valueOf(s.selectedMapId));
             p.setProperty("raceThreshold", String.valueOf(ss.raceThreshold()));
             p.setProperty("soundEnabled", String.valueOf(ss.soundEnabled()));
             p.setProperty("musicEnabled", String.valueOf(ss.musicEnabled()));
@@ -62,7 +62,6 @@ public class GameSaveManager {
             p.setProperty("movingObstaclesEnabled", String.valueOf(ss.movingObstaclesEnabled()));
             p.setProperty("movingObstacleCount", String.valueOf(ss.movingObstacleCount()));
             p.setProperty("movingObstaclesAutoIncrement", String.valueOf(ss.movingObstaclesAutoIncrement()));
-            p.setProperty("developerModeEnabled", String.valueOf(ss.developerModeEnabled()));
         }
 
         // gameplay
@@ -150,9 +149,11 @@ public class GameSaveManager {
                     Boolean.parseBoolean(p.getProperty("movingObstaclesEnabled", "false")),
                     Integer.parseInt(p.getProperty("movingObstacleCount", "0")),
                     Boolean.parseBoolean(p.getProperty("movingObstaclesAutoIncrement", "false")),
-                    Boolean.parseBoolean(p.getProperty("developerModeEnabled", "false"))
+                    false
             );
             s.settingsSnapshot = ss;
+            s.mode = ss.currentMode();
+            s.selectedMapId = ss.selectedMapId();
 
             // gameplay
             s.score = Integer.parseInt(p.getProperty("score", "0"));

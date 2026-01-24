@@ -1,6 +1,7 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.config.GameSettingsManager;
 import com.snakegame.model.GameConfig;
 
 import javax.swing.*;
@@ -96,11 +97,14 @@ public class DifficultyPanel extends JPanel {
         JButton save = new JButton("✅ Save");
         save.setAlignmentX(CENTER_ALIGNMENT);
         save.addActionListener(e -> {
-            GameSettings.setDifficultyLevel(speedSlider.getValue());
-            GameSettings.setObstaclesEnabled(obstacleCheckbox.isSelected());
-            GameSettings.setMovingObstaclesEnabled(movingObsCheckbox.isSelected());
-            GameSettings.setMovingObstacleCount((Integer) movingObsCountSpinner.getValue());
-            GameSettings.setMovingObstaclesAutoIncrement(movingObsAutoIncrement.isSelected());
+            GameSettings.withAutosaveSuppressed(() -> {
+                GameSettings.setDifficultyLevel(speedSlider.getValue());
+                GameSettings.setObstaclesEnabled(obstacleCheckbox.isSelected());
+                GameSettings.setMovingObstaclesEnabled(movingObsCheckbox.isSelected());
+                GameSettings.setMovingObstacleCount((Integer) movingObsCountSpinner.getValue());
+                GameSettings.setMovingObstaclesAutoIncrement(movingObsAutoIncrement.isSelected());
+            });
+            GameSettingsManager.save();
             JOptionPane.showMessageDialog(this, "Settings saved!");
         });
 

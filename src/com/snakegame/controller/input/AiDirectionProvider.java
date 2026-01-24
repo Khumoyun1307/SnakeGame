@@ -240,7 +240,11 @@ public class AiDirectionProvider implements DirectionProvider {
 
         for (Point o : state.getObstacles()) blocked.add(Cell.fromPixel(o));
 
-        if (GameSettings.isMovingObstaclesEnabled()) {
+        boolean movingEnabled = state.getRunSettingsSnapshot() != null
+                ? state.getRunSettingsSnapshot().movingObstaclesEnabled()
+                : GameSettings.isMovingObstaclesEnabled();
+
+        if (movingEnabled) {
             for (MovingObstacle mo : state.getMovingObstacles()) {
                 for (Point seg : mo.getSegments()) blocked.add(Cell.fromPixel(seg));
             }

@@ -1,6 +1,8 @@
 package com.snakegame.util;
 
 import com.snakegame.model.GameSnapshot;
+import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapManager;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,12 +10,15 @@ import java.io.ObjectOutputStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Persists and provides the set of unlocked maps for MAP_SELECT and RACE modes.
  */
 public class ProgressManager {
-    private static String filePath = "data/progress.txt";
+    private static final Logger log = Logger.getLogger(ProgressManager.class.getName());
+    private static String filePath = AppPaths.PROGRESS_FILE.toString();
     private static final Set<Integer> unlockedMaps = new HashSet<>();
 
     static {
@@ -60,7 +65,7 @@ public class ProgressManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to load progress from: " + filePath, e);
         }
     }
 
@@ -78,7 +83,7 @@ public class ProgressManager {
                     StandardOpenOption.TRUNCATE_EXISTING
             );
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to save progress to: " + filePath, e);
         }
     }
 
@@ -101,5 +106,30 @@ public class ProgressManager {
     public static Optional<GameSnapshot> loadGame() { return GameSaveManager.load(); }
     public static void clearSavedGame() { GameSaveManager.clearSave(); }
     public static OptionalInt getSavedGameScore() { return GameSaveManager.getSavedScore(); }
+
+    public static boolean isSavedGameDeveloperOnly() {
+        Optional<GameSnapshot> opt = loadGame();
+        if (opt.isEmpty()) return false;
+
+        GameSnapshot s = opt.get();
+        GameMode mode = (s.mode != null)
+                ? s.mode
+                : (s.settingsSnapshot != null ? s.settingsSnapshot.currentMode() : GameMode.STANDARD);
+        int selectedMapId = (s.selectedMapId != 0)
+                ? s.selectedMapId
+                : (s.settingsSnapshot != null ? s.settingsSnapshot.selectedMapId() : 0);
+
+        if (mode == GameMode.STANDARD) return false;
+        return selectedMapId > 0 && !MapManager.isPackagedMapId(selectedMapId);
+    }
+
+    /**
+     * Clears the saved game unless it is developer-only and the caller is not in developer mode.
+     * Keeps developer-only saves hidden/preserved for normal users.
+     */
+    public static void clearSavedGameIfAllowed(boolean developerModeEnabled) {
+        if (!developerModeEnabled && isSavedGameDeveloperOnly()) return;
+        clearSavedGame();
+    }
 
 }

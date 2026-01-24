@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Manages maps entirely in-memory during runtime, loading resource maps once,
@@ -29,6 +31,7 @@ import java.util.regex.Pattern;
 public class MapManager {
     private static final int RESOURCE_MAP_COUNT = 10;
     private static final Map<Integer, MapConfig> maps = new HashMap<>();
+    private static final Logger log = Logger.getLogger(MapManager.class.getName());
 
     static {
         // Load only the packaged resource maps at startup
@@ -39,7 +42,7 @@ public class MapManager {
                 List<Point> pts = readPoints(new BufferedReader(new InputStreamReader(is)));
                 maps.put(i, new MapConfig(i, pts));
             } catch (IOException | NumberFormatException e) {
-                e.printStackTrace();
+                log.log(Level.WARNING, "Failed to load resource map: " + resPath, e);
             }
         }
     }
@@ -64,7 +67,7 @@ public class MapManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to load developer maps from: " + dir, e);
         }
     }
 
@@ -86,7 +89,7 @@ public class MapManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to save developer map: " + id, e);
         }
         // 2) Immediately update in-memory cache
         List<Point> pts = new ArrayList<>(obstacles);
@@ -105,6 +108,11 @@ public class MapManager {
 
     public static MapConfig getMap(int id) {
         return maps.get(id);
+    }
+
+    /** True if this id exists in the packaged (non-developer) map set. */
+    public static boolean isPackagedMapId(int id) {
+        return id >= 1 && id <= RESOURCE_MAP_COUNT;
     }
 
     private static List<Point> readPoints(BufferedReader reader) throws IOException {

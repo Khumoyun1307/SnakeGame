@@ -4,8 +4,12 @@ import com.snakegame.config.GameSettings;
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SoundPlayer {
+    private static final Logger log = Logger.getLogger(SoundPlayer.class.getName());
+
     public static void play(String soundFileName) {
         // Respect user setting for sound effects
         if (!GameSettings.isSoundEnabled()) return;
@@ -13,7 +17,7 @@ public class SoundPlayer {
         try {
             URL url = SoundPlayer.class.getResource("/sounds/" + soundFileName);
             if (url == null) {
-                System.err.println("Sound not found: " + soundFileName);
+                log.warning("Sound not found: " + soundFileName);
                 return;
             }
 
@@ -30,7 +34,7 @@ public class SoundPlayer {
             });
 
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to play sound: " + soundFileName, e);
         }
     }
 }

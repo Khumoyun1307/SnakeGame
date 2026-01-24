@@ -1,6 +1,7 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
+import com.snakegame.mode.MapManager;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -30,7 +31,6 @@ public class MainMenuPanel extends JPanel {
 //        this.continueButton.addActionListener(menuListener);
 
         this.continueButton.addActionListener(evt -> {
-            System.out.println("CONTINUE CLICKED");
             menuListener.actionPerformed(evt);
         });
 
@@ -82,6 +82,9 @@ public class MainMenuPanel extends JPanel {
 
         // ✅ Sets visible/text correctly based on saved game presence
         refreshContinueButton();
+        if (GameSettings.isDeveloperModeEnabled()) {
+            addDeveloperButton();
+        }
 
         setFocusable(true);
         requestFocusInWindow();
@@ -115,11 +118,13 @@ public class MainMenuPanel extends JPanel {
                 }
                 if (codeBuffer.toString().equals(target)) {
                     GameSettings.setDeveloperModeEnabled(true);
+                    MapManager.loadDeveloperMaps();
                     JOptionPane.showMessageDialog(
                             MainMenuPanel.this,
                             "🔧 Developer mode unlocked!"
                     );
                     addDeveloperButton();
+                    refreshContinueButton();
                 }
             }
 
@@ -135,7 +140,8 @@ public class MainMenuPanel extends JPanel {
 
 
     public void refreshContinueButton() {
-        if (ProgressManager.hasSavedGame()) {
+        if (ProgressManager.hasSavedGame()
+                && (!ProgressManager.isSavedGameDeveloperOnly() || GameSettings.isDeveloperModeEnabled())) {
             int savedScore = ProgressManager.getSavedGameScore().orElse(0);
             continueButton.setText("▶ Continue (" + savedScore + ")");
             continueButton.setVisible(true);
@@ -152,7 +158,7 @@ public class MainMenuPanel extends JPanel {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10,10,10,10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.gridy = 9; // after your existing 0–6 rows
+        gbc.gridy = 11; // after Exit
         gbc.gridx = 0;
 
         JButton dev = new JButton("🛠 Developer");

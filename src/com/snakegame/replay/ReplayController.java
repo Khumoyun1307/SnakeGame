@@ -1,6 +1,5 @@
 package com.snakegame.replay;
 
-import com.snakegame.config.GameSettings;
 import com.snakegame.model.Direction;
 import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameState;
@@ -21,14 +20,17 @@ public class ReplayController implements ActionListener {
 
     private boolean playing = false;
 
-    public ReplayController(GameState state, List<ReplayEvent> events, Runnable repaintCallback) {
+    private final int baseTickMs;
+    private double speedMultiplier = 1.0;
+
+    public ReplayController(GameState state, int baseTickMs, List<ReplayEvent> events, Runnable repaintCallback) {
         this.state = state;
+        this.baseTickMs = Math.max(1, baseTickMs);
         this.events = (events == null) ? List.of() : events;
         this.repaintCallback = repaintCallback;
 
-        int baseDelay = GameSettings.getSpeedDelayFromDifficultyLevel();
-        this.timer = new Timer(baseDelay, this);
-        this.state.setTickMs(baseDelay);
+        this.timer = new Timer(this.baseTickMs, this);
+        this.state.setTickMs(this.baseTickMs);
     }
 
     public void play() {
@@ -46,10 +48,9 @@ public class ReplayController implements ActionListener {
 
     public void setSpeedMultiplier(double mult) {
         if (mult <= 0) mult = 1.0;
-        int baseDelay = GameSettings.getSpeedDelayFromDifficultyLevel();
-        int delay = (int) Math.max(1, Math.round(baseDelay / mult));
-        timer.setDelay(delay);
-        state.setTickMs(delay);
+        this.speedMultiplier = mult;
+        // Playback only: do NOT change simulation tickMs.
+        timer.setDelay(scaledDelayMs(currentEffectiveTickMs()));
     }
 
     public void stepOnce() {
@@ -68,6 +69,11 @@ public class ReplayController implements ActionListener {
     }
 
     private void tickOnce() {
+        // Keep tickMs deterministic and independent from playback speed.
+        int effectiveTickMs = currentEffectiveTickMs();
+        state.setTickMs(effectiveTickMs);
+        timer.setDelay(scaledDelayMs(effectiveTickMs));
+
         if (!state.isRunning()) {
             pause();
             repaintCallback.run();
@@ -88,5 +94,16 @@ public class ReplayController implements ActionListener {
         if (!state.isRunning()) {
             pause();
         }
+    }
+
+    private int currentEffectiveTickMs() {
+        return state.isSlowed()
+                ? baseTickMs + GameConfig.SLOWDOWN_OFFSET_MS
+                : baseTickMs;
+    }
+
+    private int scaledDelayMs(int simulationTickMs) {
+        if (speedMultiplier <= 0) speedMultiplier = 1.0;
+        return (int) Math.max(1, Math.round(simulationTickMs / speedMultiplier));
     }
 }

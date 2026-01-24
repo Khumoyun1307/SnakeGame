@@ -9,10 +9,14 @@ import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ScoreManager {
+ 
+    private static final Logger log = Logger.getLogger(ScoreManager.class.getName());
 
-    private static String scoreFilePath = "scores.txt";
+    private static String scoreFilePath = AppPaths.SCORES_FILE.toString();
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final List<String> scores = new ArrayList<>();
     private static final LeaderboardClient leaderboardClient = new LeaderboardClient();
@@ -30,7 +34,7 @@ public class ScoreManager {
                 scores.addAll(Files.readAllLines(path));
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to load scores from: " + scoreFilePath, e);
         }
     }
 
@@ -58,16 +62,16 @@ public class ScoreManager {
         // Always save locally
         addScore(score);
 
-        long timeSurvivedMs = gameState.getTick() * (long) gameState.getTickMs();
+        long timeSurvivedMs = gameState.getElapsedSimTimeMs();
 
         String mode = GameSettings.getCurrentMode().name();
 
         int mapIdToSubmit;
         if (mode.equals(GameMode.MAP_SELECT.name())) {
-            mapIdToSubmit = GameSettings.getSelectedMapId(); // 1..10
+            mapIdToSubmit = gameState.getCurrentMapId(); // 1..N
         } else if (mode.equals(GameMode.RACE.name())) {
             // FIX: RACE should submit the current/furthest map reached
-            mapIdToSubmit = GameSettings.getSelectedMapId();
+            mapIdToSubmit = gameState.getCurrentMapId();
         } else {
             mapIdToSubmit = 0; // STANDARD
         }
@@ -82,7 +86,7 @@ public class ScoreManager {
                 timeSurvivedMs,
                 "1.0.0"
         ).exceptionally(ex -> {
-            System.out.println("Leaderboard submit failed: " + ex.getMessage());
+            log.log(Level.INFO, "Leaderboard submit failed", ex);
             return null;
         });
 
@@ -97,7 +101,7 @@ public class ScoreManager {
                     StandardOpenOption.APPEND
             );
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to append score to file: " + scoreFilePath, e);
         }
     }
 
@@ -114,7 +118,7 @@ public class ScoreManager {
                     StandardOpenOption.TRUNCATE_EXISTING
             );
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.WARNING, "Failed to save scores to file: " + scoreFilePath, e);
         }
     }
 

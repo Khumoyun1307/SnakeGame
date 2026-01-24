@@ -11,4 +11,3 @@ public class SnakeGame {
         SwingUtilities.invokeLater(GameFrame::new);
     }
 }
-
