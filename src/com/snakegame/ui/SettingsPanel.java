@@ -7,6 +7,9 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import com.snakegame.sound.MusicManager;
 
+/**
+ * UI panel for configuring user settings such as audio, grid display, name, and theme.
+ */
 public class SettingsPanel extends JPanel {
     private final JCheckBox soundCheck;
     private final JCheckBox musicCheck;
@@ -17,6 +20,11 @@ public class SettingsPanel extends JPanel {
     boolean wasMusicOn = GameSettings.isMusicEnabled();
     boolean wasSoundOn = GameSettings.isSoundEnabled();
 
+    /**
+     * Creates a settings panel.
+     *
+     * @param onBack listener invoked when the user navigates back
+     */
     public SettingsPanel(ActionListener onBack) {
         setLayout(new BorderLayout());
         setBackground(Color.DARK_GRAY);
@@ -111,6 +119,11 @@ public class SettingsPanel extends JPanel {
         add(content, BorderLayout.CENTER);
     }
 
+    /**
+     * Builds the Save button wired to persist current UI selections to {@link GameSettings}.
+     *
+     * @return save button
+     */
     private JButton getSaveJButton() {
         JButton save = new JButton("✔ Save");
         save.addActionListener(e -> {

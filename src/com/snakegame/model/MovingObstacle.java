@@ -14,6 +14,16 @@ public class MovingObstacle {
     private int dx, dy;
     private final Rectangle bounds;
 
+    /**
+     * Creates a moving obstacle as a contiguous line of segments.
+     *
+     * @param start starting position (pixel coordinates)
+     * @param length number of segments
+     * @param vertical whether the obstacle is vertical (otherwise horizontal)
+     * @param speed movement speed in pixels per tick
+     * @param area movement bounds
+     * @param rng random source used to choose initial direction deterministically
+     */
     public MovingObstacle(Point start, int length, boolean vertical, int speed, Rectangle area, Random rng) {
         this.segments = new ArrayList<>();
         this.bounds = area;
@@ -34,6 +44,9 @@ public class MovingObstacle {
         }
     }
 
+    /**
+     * Advances the obstacle by one tick, bouncing off bounds edges by inverting velocity.
+     */
     public void update() {
         for (Point p : segments) {
             p.translate(dx, dy);
@@ -48,8 +61,23 @@ public class MovingObstacle {
         if (bounceY) dy = -dy;
     }
 
+    /**
+     * Returns the list of obstacle segments.
+     *
+     * @return segment positions (pixel coordinates)
+     */
     public List<Point> getSegments() { return segments; }
+    /**
+     * Returns the x velocity component in pixels per tick.
+     *
+     * @return dx velocity
+     */
     public int getDx() { return dx; }
+    /**
+     * Returns the y velocity component in pixels per tick.
+     *
+     * @return dy velocity
+     */
     public int getDy() { return dy; }
 
     /** Backward compatible restore (no RNG needed because dx/dy are stored) */

@@ -9,6 +9,18 @@ import com.snakegame.model.*;
 import java.awt.Point;
 import java.util.*;
 
+/**
+ * AI implementation of {@link DirectionProvider}.
+ *
+ * <p>Supports multiple strategies via {@link AiMode}:
+ * <ul>
+ *   <li>{@code CHASE}: plain A* pathfinding to the apple</li>
+ *   <li>{@code SAFE}: pursue the apple only when an escape route (tail reachability) exists</li>
+ *   <li>{@code SURVIVAL}: prioritize open space and loop avoidance; pursue apples opportunistically</li>
+ * </ul>
+ *
+ * <p>The world is treated as a grid with wrap-around edges, mirroring the simulation.</p>
+ */
 public class AiDirectionProvider implements DirectionProvider {
 
     private final AStarPathfinder pathfinder = new AStarPathfinder();
@@ -18,10 +30,21 @@ public class AiDirectionProvider implements DirectionProvider {
     private final ArrayDeque<Cell> recentHeads = new ArrayDeque<>();
     private static final int RECENT_LIMIT = 12;
 
+    /**
+     * Creates a new AI direction provider.
+     *
+     * @param mode AI mode to use (defaults to {@link AiMode#SAFE} when {@code null})
+     */
     public AiDirectionProvider(AiMode mode) {
         this.mode = (mode == null) ? AiMode.SAFE : mode;
     }
 
+    /**
+     * Computes the next direction to apply for the given simulation state.
+     *
+     * @param state current simulation state
+     * @return next direction to apply, or {@code null} if no safe move is available
+     */
     @Override
     public Direction nextDirection(GameState state) {
         int cols = GameConfig.SCREEN_WIDTH / GameConfig.UNIT_SIZE;

@@ -7,21 +7,52 @@ import com.snakegame.util.ScoreManager;
 
 import java.awt.*;
 
+/**
+ * Rendering utility for drawing the game world to a Swing {@link Graphics} context.
+ *
+ * <p>Supports both live gameplay (using global {@link GameSettings}) and watch-only replay
+ * rendering (using a provided {@link SettingsSnapshot} without mutating global settings).</p>
+ */
 public final class GameRenderer {
     private GameRenderer() {}
 
     // ---------------------- LIVE GAME ----------------------
     // Live gameplay can keep using global GameSettings.
+    /**
+     * Renders the world scaled to fit the given panel bounds (live gameplay).
+     *
+     * @param g graphics context
+     * @param gameState current game state
+     * @param panelW panel width in pixels
+     * @param panelH panel height in pixels
+     */
     public static void renderScaleToFit(Graphics g, GameState gameState, int panelW, int panelH) {
         renderScaleToFit(g, gameState, panelW, panelH, null);
     }
 
+    /**
+     * Renders the world centered at a fixed size within the given panel bounds (live gameplay).
+     *
+     * @param g graphics context
+     * @param gameState current game state
+     * @param panelW panel width in pixels
+     * @param panelH panel height in pixels
+     */
     public static void renderFixed(Graphics g, GameState gameState, int panelW, int panelH) {
         renderFixed(g, gameState, panelW, panelH, null);
     }
 
     // ---------------------- WATCH-ONLY (REPLAY) ----------------------
     // Replay should call these overloads with SettingsSnapshot from the replay data.
+    /**
+     * Renders the world scaled to fit the given panel bounds using a provided settings snapshot.
+     *
+     * @param g graphics context
+     * @param gameState replay game state
+     * @param panelW panel width in pixels
+     * @param panelH panel height in pixels
+     * @param settings frozen settings to use for rendering (may be {@code null})
+     */
     public static void renderScaleToFit(Graphics g, GameState gameState, int panelW, int panelH, SettingsSnapshot settings) {
         if (gameState == null) return;
 
@@ -54,6 +85,15 @@ public final class GameRenderer {
         }
     }
 
+    /**
+     * Renders the world centered at a fixed size using a provided settings snapshot.
+     *
+     * @param g graphics context
+     * @param gameState replay game state
+     * @param panelW panel width in pixels
+     * @param panelH panel height in pixels
+     * @param settings frozen settings to use for rendering (may be {@code null})
+     */
     public static void renderFixed(Graphics g, GameState gameState, int panelW, int panelH, SettingsSnapshot settings) {
         if (gameState == null) return;
 
@@ -80,6 +120,13 @@ public final class GameRenderer {
 
     // ------------------- INTERNAL -------------------
 
+    /**
+     * Renders the world in simulation coordinates (0,0 at the top-left of the playfield).
+     *
+     * @param g graphics context (already translated/scaled as desired)
+     * @param gameState state to render
+     * @param settings optional settings snapshot for watch-only rendering
+     */
     static void renderWorld(Graphics g, GameState gameState, SettingsSnapshot settings) {
         boolean showGrid = (settings != null) ? settings.showGrid() : GameSettings.isShowGrid();
         if (showGrid) drawGrid(g);

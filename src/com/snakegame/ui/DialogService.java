@@ -4,6 +4,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
+/**
+ * Small wrapper around common Swing dialogs used by the game flow.
+ *
+ * <p>Encapsulates pause/game-over UI to keep controller code focused on orchestration.</p>
+ */
 public class DialogService {
 
     public static final int YES_OPTION = JOptionPane.YES_OPTION;
@@ -11,6 +16,11 @@ public class DialogService {
     public static final int CANCEL_OPTION = JOptionPane.CANCEL_OPTION;
     public static final int CLOSED_OPTION = JOptionPane.CLOSED_OPTION;
 
+    /**
+     * Shows the in-game settings dialog (modal).
+     *
+     * @param parent parent component used to locate the owning window
+     */
     public void showInGameSettings(Component parent) {
         JDialog dlg = new JDialog(
                 SwingUtilities.getWindowAncestor(parent),
@@ -24,6 +34,18 @@ public class DialogService {
         dlg.setVisible(true);
     }
 
+    /**
+     * Shows the in-game pause menu dialog.
+     *
+     * @param parent parent component used to locate the owning window
+     * @param score current score to display
+     * @param onResume callback to resume gameplay
+     * @param onOpenSettings callback to open settings
+     * @param onSaveQuit callback to save and quit to menu
+     * @param onRestart callback to restart the run
+     * @param onMainMenu callback to return to the main menu
+     * @param onExit callback to exit the application
+     */
     public void showPauseDialog(Component parent,
                                int score,
                                Runnable onResume,
@@ -115,6 +137,14 @@ public class DialogService {
         dialog.setVisible(true);
     }
 
+    /**
+     * Shows the game-over dialog.
+     *
+     * @param finalScore score at the end of the run
+     * @param onRestart callback to restart the run
+     * @param onSettings callback to open settings
+     * @param onMainMenu callback to return to the main menu
+     */
     public void showGameOverDialog(int finalScore,
                                   Runnable onRestart,
                                   Runnable onSettings,
@@ -187,6 +217,13 @@ public class DialogService {
         dialog.setVisible(true);
     }
 
+    /**
+     * Shows a confirmation dialog prompting to save the score before an action.
+     *
+     * @param parent parent component
+     * @param actionVerb verb phrase used in the prompt (e.g., "quitting")
+     * @return one of {@link JOptionPane}'s option constants
+     */
     public int confirmSaveScore(Component parent, String actionVerb) {
         return JOptionPane.showConfirmDialog(
                 parent,
@@ -197,6 +234,13 @@ public class DialogService {
         );
     }
 
+    /**
+     * Shows an exit confirmation dialog.
+     *
+     * @param parent parent component
+     * @param message message to display
+     * @return {@code true} if the user confirms exit
+     */
     public boolean confirmExit(Component parent, String message) {
         int choice = JOptionPane.showConfirmDialog(
                 parent,
@@ -208,4 +252,3 @@ public class DialogService {
         return choice == JOptionPane.YES_OPTION;
     }
 }
-

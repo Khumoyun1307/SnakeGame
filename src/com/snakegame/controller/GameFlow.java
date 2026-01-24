@@ -14,6 +14,13 @@ import com.snakegame.util.ScoreManager;
 import java.awt.*;
 import java.util.List;
 
+/**
+ * Handles higher-level game flow: pause menu, tick side effects, and game-over transitions.
+ *
+ * <p>{@link GameState} emits {@link GameEvent}s during simulation updates; this class consumes those
+ * events and triggers UI/persistence side effects without coupling the core simulation to Swing,
+ * file IO, or audio.</p>
+ */
 public final class GameFlow implements TickHandler {
 
     private final GameState gameState;
@@ -25,6 +32,18 @@ public final class GameFlow implements TickHandler {
     private final DialogService dialogs;
     private final LoopControl loopControl;
 
+    /**
+     * Creates a new flow handler for a run.
+     *
+     * @param gameState simulation state for the run
+     * @param runMode mode selected for the run
+     * @param runRecorder recorder used to persist replays for player runs
+     * @param restartCallback callback to restart gameplay
+     * @param goToMainMenuCallback callback to return to the main menu
+     * @param settingsCallback callback to open settings from the game-over dialog
+     * @param dialogs dialog service used to show modal UI
+     * @param loopControl abstraction over the running loop
+     */
     public GameFlow(GameState gameState,
                     GameMode runMode,
                     RunRecorder runRecorder,
@@ -43,6 +62,11 @@ public final class GameFlow implements TickHandler {
         this.loopControl = loopControl;
     }
 
+    /**
+     * Pauses the loop and shows the in-game pause dialog.
+     *
+     * @param parent parent component for dialog placement
+     */
     public void onPauseRequested(Component parent) {
         loopControl.pause();
 
@@ -61,6 +85,7 @@ public final class GameFlow implements TickHandler {
         );
     }
 
+    /** {@inheritDoc} */
     @Override
     public void handleTickEvents(List<GameEvent> events) {
         for (GameEvent event : events) {
@@ -74,6 +99,7 @@ public final class GameFlow implements TickHandler {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void onGameOver() {
         loopControl.stop();

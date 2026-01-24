@@ -1,5 +1,10 @@
 package com.snakegame.net;
 
+/**
+ * Configuration values for the online leaderboard client.
+ *
+ * <p>Contains the service base URL and HTTP timeout settings.</p>
+ */
 public final class LeaderboardConfig {
     private LeaderboardConfig() {}
 

@@ -20,6 +20,11 @@ public class MapModePanel extends JPanel {
     private final ButtonGroup group;
     private final Map<Integer, JToggleButton> mapButtons;
 
+    /**
+     * Creates a map selection panel.
+     *
+     * @param goBack callback invoked when navigating back
+     */
     public MapModePanel(Runnable goBack) {
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);

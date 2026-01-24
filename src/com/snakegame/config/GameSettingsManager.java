@@ -14,10 +14,22 @@ import com.snakegame.model.GameConfig;
 import com.snakegame.util.AppPaths;
 
 
+/**
+ * Loads and saves {@link GameSettings} to a local {@link java.util.Properties} file.
+ *
+ * <p>This class is responsible for persistence only. It performs basic sanitization when loading
+ * (for example generating a missing player UUID) and ensures that developer-only map selections
+ * do not leak into non-developer sessions.</p>
+ */
 public class GameSettingsManager {
     private static final String FILE_PATH = AppPaths.SETTINGS_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSettingsManager.class.getName());
 
+    /**
+     * Loads settings from disk into {@link GameSettings}.
+     *
+     * <p>If the settings file does not exist, defaults are created and immediately saved.</p>
+     */
     public static void load() {
         File file = new File(FILE_PATH);
         if (!file.exists()) {
@@ -119,6 +131,9 @@ public class GameSettingsManager {
         }
     }
 
+    /**
+     * Saves the current {@link GameSettings} values to disk.
+     */
     public static void save() {
         File file = new File(FILE_PATH);
         File parent = file.getParentFile();

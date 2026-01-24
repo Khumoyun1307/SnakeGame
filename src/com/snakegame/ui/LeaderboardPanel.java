@@ -12,6 +12,9 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * UI panel for browsing the online leaderboard with filters and pagination.
+ */
 public class LeaderboardPanel extends JPanel {
 
     private final Runnable onBack;
@@ -43,6 +46,11 @@ public class LeaderboardPanel extends JPanel {
     private int offset = 0;
     private int lastReturnedCount = 0;
 
+    /**
+     * Creates the leaderboard panel.
+     *
+     * @param onBack callback invoked when navigating back
+     */
     public LeaderboardPanel(Runnable onBack) {
         this.onBack = onBack;
 
@@ -321,6 +329,9 @@ public class LeaderboardPanel extends JPanel {
         b.setFocusPainted(false);
     }
 
+    /**
+     * Fetches leaderboard data using the current UI filter selections and loads it into the table.
+     */
     public void refresh() {
         Integer mapIdObj = (Integer) mapBox.getSelectedItem();
         int mapId = (mapIdObj == null) ? 0 : mapIdObj;

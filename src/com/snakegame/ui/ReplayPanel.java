@@ -13,6 +13,12 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.util.Optional;
 
+/**
+ * UI panel for viewing deterministic replays in watch-only mode.
+ *
+ * <p>Uses a local {@link SettingsSnapshot} from the replay file so that playback does not mutate
+ * global {@link GameSettings}.</p>
+ */
 public class ReplayPanel extends JPanel {
 
     private final Runnable backToMenu;
@@ -31,6 +37,11 @@ public class ReplayPanel extends JPanel {
 
     private final JPanel gameCanvas;
 
+    /**
+     * Creates the replay panel.
+     *
+     * @param backToMenu callback invoked when returning to the main menu
+     */
     public ReplayPanel(Runnable backToMenu) {
         this.backToMenu = backToMenu;
 

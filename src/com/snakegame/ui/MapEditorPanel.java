@@ -9,11 +9,22 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Simple grid-based map editor used in developer mode.
+ *
+ * <p>Allows toggling obstacle cells and saving the resulting obstacle layout to a developer map
+ * file via {@link MapManager}.</p>
+ */
 public class MapEditorPanel extends JPanel {
     private final int cols = GameConfig.SCREEN_WIDTH / GameConfig.UNIT_SIZE;
     private final int rows = GameConfig.SCREEN_HEIGHT / GameConfig.UNIT_SIZE;
     private final Cell[][] grid;
 
+    /**
+     * Creates the map editor panel.
+     *
+     * @param goBack callback invoked when returning to the previous screen
+     */
     public MapEditorPanel(Runnable goBack) {
         setLayout(new BorderLayout());
         // Grid canvas

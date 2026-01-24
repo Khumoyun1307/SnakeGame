@@ -12,6 +12,11 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Manages local score history and optional online leaderboard submission.
+ *
+ * <p>Scores are appended to a plain text file and kept in memory for UI display.</p>
+ */
 public class ScoreManager {
  
     private static final Logger log = Logger.getLogger(ScoreManager.class.getName());
@@ -38,21 +43,39 @@ public class ScoreManager {
         }
     }
 
+    /**
+     * Overrides the score file path (primarily for tests) and reloads existing scores.
+     *
+     * @param path new file path
+     */
     public static void setScoreFilePath(String path) {
         scoreFilePath = path;
         loadFromFile();
     }
 
+    /**
+     * Clears the in-memory score list (does not delete the score file).
+     */
     public static void clearScores() {
         scores.clear();
     }
 
+    /**
+     * Adds a score entry with a timestamp and persists it to the score file.
+     *
+     * @param score score value to record
+     */
     public static void addScore(int score) {
         String entry = FORMATTER.format(LocalDateTime.now()) + " - Score: " + score;
         scores.add(entry);
         appendToFile(entry);
     }
 
+    /**
+     * Records a finished run locally and submits it to the online leaderboard asynchronously.
+     *
+     * @param gameState finished run state
+     */
     public static void recordFinishedRun(GameState gameState) {
         if (gameState == null) return;
 
@@ -105,10 +128,18 @@ public class ScoreManager {
         }
     }
 
+    /**
+     * Returns the current score history as a defensive copy.
+     *
+     * @return recorded score lines
+     */
     public static List<String> getScores() {
         return new ArrayList<>(scores);
     }
 
+    /**
+     * Rewrites the entire score file from the current in-memory list.
+     */
     public static void saveAllToFile() {
         try {
             Files.write(
@@ -122,6 +153,11 @@ public class ScoreManager {
         }
     }
 
+    /**
+     * Returns the highest recorded score.
+     *
+     * @return high score
+     */
     public static int getHighScore() {
         return scores.stream()
                 .mapToInt(line -> {

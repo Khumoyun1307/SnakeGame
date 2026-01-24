@@ -2,8 +2,27 @@ package com.snakegame.ai;
 
 import java.util.*;
 
+/**
+ * A* pathfinder for a 4-neighbor grid with wrap-around (toroidal) edges.
+ *
+ * <p>This implementation is used by the AI to route from the snake head to a target cell while
+ * treating body segments and obstacles as blocked cells.</p>
+ */
 public class AStarPathfinder {
 
+    /**
+     * Finds a shortest path between two cells on a toroidal grid.
+     *
+     * <p>The returned path is inclusive of {@code start} and {@code goal}. If {@code start} equals
+     * {@code goal}, a singleton path is returned.</p>
+     *
+     * @param start start cell (grid coordinates)
+     * @param goal goal cell (grid coordinates)
+     * @param blocked cells that must not be entered
+     * @param cols total number of columns in the grid
+     * @param rows total number of rows in the grid
+     * @return path from {@code start} to {@code goal} (inclusive), or {@code null} if no path exists
+     */
     public List<Cell> findPath(Cell start,
                                Cell goal,
                                Set<Cell> blocked,

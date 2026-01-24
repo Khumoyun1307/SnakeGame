@@ -15,25 +15,54 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Persists and loads {@link GameSnapshot} instances for the save/continue feature.
+ *
+ * <p>Uses a simple {@link Properties}-based text format stored under {@link AppPaths#SAVE_FILE}.</p>
+ */
 public class GameSaveManager {
-    private static final String FILE_PATH = AppPaths.SAVE_FILE.toString();
+    private static String filePath = AppPaths.SAVE_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSaveManager.class.getName());
 
-    public static boolean hasSave() {
-        return new File(FILE_PATH).exists();
-    }
-
-    public static void clearSave() {
-        File f = new File(FILE_PATH);
-        if (f.exists() && !f.delete()) {
-            log.warning("Failed to delete save file: " + FILE_PATH);
+    /**
+     * Overrides the save file path (primarily for tests). If null/blank, resets to the default.
+     */
+    public static void setFilePath(String path) {
+        if (path == null || path.isBlank()) {
+            filePath = AppPaths.SAVE_FILE.toString();
+        } else {
+            filePath = path;
         }
     }
 
+    /**
+     * Returns whether a saved game exists on disk.
+     *
+     * @return {@code true} if the save file exists
+     */
+    public static boolean hasSave() {
+        return new File(filePath).exists();
+    }
+
+    /**
+     * Deletes the saved game file if it exists.
+     */
+    public static void clearSave() {
+        File f = new File(filePath);
+        if (f.exists() && !f.delete()) {
+            log.warning("Failed to delete save file: " + filePath);
+        }
+    }
+
+    /**
+     * Writes a snapshot to disk as the current saved game.
+     *
+     * @param s snapshot to save
+     */
     public static void save(GameSnapshot s) {
         if (s == null) return;
 
-        File file = new File(FILE_PATH);
+        File file = new File(filePath);
         File parent = file.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             log.severe("Failed to create save directory: " + parent.getPath());
@@ -104,8 +133,13 @@ public class GameSaveManager {
         }
     }
 
+    /**
+     * Loads the saved game snapshot from disk.
+     *
+     * @return optional snapshot (empty if missing or unreadable)
+     */
     public static Optional<GameSnapshot> load() {
-        File file = new File(FILE_PATH);
+        File file = new File(filePath);
         if (!file.exists()) return Optional.empty();
 
         Properties p = new Properties();
@@ -190,12 +224,17 @@ public class GameSaveManager {
 
             return Optional.of(s);
         } catch (Exception ex) {
-            log.log(Level.SEVERE, "Save file corrupted, clearing: " + FILE_PATH, ex);
+            log.log(Level.SEVERE, "Save file corrupted, clearing: " + filePath, ex);
             clearSave();
             return Optional.empty();
         }
     }
 
+    /**
+     * Convenience helper to read the saved score without restoring the full snapshot in memory.
+     *
+     * @return saved score if a valid save exists
+     */
     public static OptionalInt getSavedScore() {
         Optional<GameSnapshot> s = load();
         return s.isPresent() ? OptionalInt.of(s.get().score) : OptionalInt.empty();

@@ -106,6 +106,12 @@ public class MapManager {
         return ids;
     }
 
+    /**
+     * Returns the map configuration for the given id, if loaded.
+     *
+     * @param id map id
+     * @return map configuration, or {@code null} if not found
+     */
     public static MapConfig getMap(int id) {
         return maps.get(id);
     }

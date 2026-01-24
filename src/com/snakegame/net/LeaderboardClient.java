@@ -16,6 +16,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Lightweight HTTP client for the online leaderboard service.
+ *
+ * <p>Uses {@link java.net.http.HttpClient} and minimal, purpose-built JSON parsing to avoid external
+ * dependencies. All operations are asynchronous.</p>
+ */
 public class LeaderboardClient {
 
     private final HttpClient client;
@@ -23,6 +29,9 @@ public class LeaderboardClient {
     private volatile UUID sessionId;
     private volatile String sessionToken;
 
+    /**
+     * Creates a new leaderboard client with configured connect timeout.
+     */
     public LeaderboardClient() {
         this.client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(LeaderboardConfig.CONNECT_TIMEOUT))
@@ -31,6 +40,11 @@ public class LeaderboardClient {
 
     // ---------------- Session ----------------
 
+    /**
+     * Starts a new leaderboard session asynchronously.
+     *
+     * @return future that completes when the session has been established and parsed
+     */
     public CompletableFuture<Void> startSessionAsync() {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(LeaderboardConfig.BASE_URL + "/api/session"))
@@ -45,12 +59,25 @@ public class LeaderboardClient {
 
     private void parseSession(String json) {
         // Very small JSON, so we keep parsing simple (no libs)
-        this.sessionId = UUID.fromString(extract(json, "sessionId"));
-        this.sessionToken = extract(json, "sessionToken");
+        this.sessionId = UUID.fromString(requireString(json, "sessionId"));
+        this.sessionToken = requireString(json, "sessionToken");
     }
 
     // ---------------- Submit Score ----------------
 
+    /**
+     * Submits a score to the leaderboard service, creating a session first if needed.
+     *
+     * @param playerId player UUID
+     * @param playerName display name
+     * @param score score value to submit
+     * @param mapId map id for the run (0 for STANDARD)
+     * @param mode game mode name
+     * @param difficulty difficulty label
+     * @param timeSurvivedMs survival time in milliseconds
+     * @param gameVersion game version string
+     * @return future that completes when the submission finishes successfully
+     */
     public CompletableFuture<Void> submitScoreAsync(
             UUID playerId,
             String playerName,
@@ -121,23 +148,78 @@ public class LeaderboardClient {
 
     // ---------------- Utils ----------------
 
-    private static String extract(String json, String key) {
-        String pattern = "\"" + key + "\":\"";
-        int start = json.indexOf(pattern);
-        if (start < 0) throw new IllegalStateException("Missing key: " + key);
-        start += pattern.length();
-        // Find closing quote, accounting for escaped quotes
-        int end = start;
-        while (end < json.length()) {
-            if (json.charAt(end) == '\\' && end + 1 < json.length()) {
-                end += 2; // Skip escaped character
-            } else if (json.charAt(end) == '"') {
-                break;
-            } else {
-                end++;
+    private static int skipWhitespace(String s, int i) {
+        while (i < s.length() && Character.isWhitespace(s.charAt(i))) i++;
+        return i;
+    }
+
+    /**
+     * Finds the start quote index of the given JSON object key, ignoring whitespace and string literals.
+     * Returns -1 if not found.
+     */
+    private static int findKey(String json, String key) {
+        boolean inString = false;
+        boolean escaped = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
             }
+
+            if (c != '"') continue;
+
+            // Potential key start at i. Keys are unescaped in our API responses.
+            int keyStart = i + 1;
+            int keyEnd = keyStart + key.length();
+            if (keyEnd >= json.length()) {
+                inString = true;
+                continue;
+            }
+            if (!json.regionMatches(keyStart, key, 0, key.length())) {
+                inString = true;
+                continue;
+            }
+            if (json.charAt(keyEnd) != '"') {
+                inString = true;
+                continue;
+            }
+
+            int j = skipWhitespace(json, keyEnd + 1);
+            if (j < json.length() && json.charAt(j) == ':') {
+                return i;
+            }
+
+            inString = true;
         }
-        return json.substring(start, end);
+        return -1;
+    }
+
+    private static int findValueStart(String json, String key) {
+        int keyIdx = findKey(json, key);
+        if (keyIdx < 0) return -1;
+
+        int i = keyIdx + 1 + key.length() + 1; // after closing quote
+        i = skipWhitespace(json, i);
+        if (i >= json.length() || json.charAt(i) != ':') return -1;
+        i++;
+        i = skipWhitespace(json, i);
+        return i;
+    }
+
+    private static String requireString(String json, String key) {
+        int valueStart = findValueStart(json, key);
+        if (valueStart < 0) throw new IllegalStateException("Missing key: " + key);
+        String out = extractStringAt(json, valueStart);
+        if (out == null) throw new IllegalStateException("Expected string value for key: " + key);
+        return out;
     }
 
     private static String escape(String s) {
@@ -151,6 +233,16 @@ public class LeaderboardClient {
                 .replace("\t", "\\t");
     }
 
+    /**
+     * Fetches leaderboard entries for the provided filters.
+     *
+     * @param mapId map id filter (0 may represent "basic"/"any" depending on mode)
+     * @param mode mode filter
+     * @param difficulty difficulty filter (or "ANY")
+     * @param limit maximum number of results (clamped to 1..50)
+     * @param offset pagination offset (clamped to &gt;= 0)
+     * @return future producing a parsed leaderboard response
+     */
     public CompletableFuture<LeaderboardResponse> fetchLeaderboardAsync(
             int mapId,
             String mode,
@@ -195,16 +287,15 @@ public class LeaderboardClient {
 
         List<LeaderboardEntry> entries = new ArrayList<>();
 
-        // Find entries array
-        int entriesIdx = json.indexOf("\"entries\":[");
-        if (entriesIdx >= 0) {
-            int start = json.indexOf('[', entriesIdx);
+        // Find entries array (whitespace-tolerant)
+        int start = findValueStart(json, "entries");
+        if (start >= 0 && start < json.length() && json.charAt(start) == '[') {
             int end = findMatchingBracket(json, start);
             String arr = json.substring(start + 1, end).trim(); // inside [ ...]
 
             if (!arr.isEmpty()) {
-                // split objects by "},{" boundary (safe for our simple objects)
-                String[] objs = arr.split("\\},\\{");
+                // split objects by "},{", allowing whitespace/newlines around the comma
+                String[] objs = arr.split("\\}\\s*,\\s*\\{");
                 for (String o : objs) {
                     String obj = o;
                     if (!obj.startsWith("{")) obj = "{" + obj;
@@ -227,11 +318,21 @@ public class LeaderboardClient {
     }
 
     private static String extractString(String json, String key) {
-        String pattern = "\"" + key + "\":\"";
-        int start = json.indexOf(pattern);
-        if (start < 0) return "";
-        start += pattern.length();
-        // Find closing quote, accounting for escaped quotes
+        int valueStart = findValueStart(json, key);
+        if (valueStart < 0) return "";
+        String out = extractStringAt(json, valueStart);
+        return out == null ? "" : out;
+    }
+
+    /**
+     * Extracts a JSON string value starting at {@code valueStart}. Returns null if value is not a string.
+     */
+    private static String extractStringAt(String json, int valueStart) {
+        int i = skipWhitespace(json, valueStart);
+        if (i < 0 || i >= json.length()) return null;
+        if (json.charAt(i) != '"') return null;
+
+        int start = i + 1;
         int end = start;
         while (end < json.length()) {
             if (json.charAt(end) == '\\' && end + 1 < json.length()) {
@@ -242,7 +343,6 @@ public class LeaderboardClient {
                 end++;
             }
         }
-        // Unescape the string
         String raw = json.substring(start, end);
         return unescape(raw);
     }
@@ -290,12 +390,8 @@ public class LeaderboardClient {
     }
 
     private static String extractNumber(String json, String key) {
-        String pattern = "\"" + key + "\":";
-        int start = json.indexOf(pattern);
+        int start = findValueStart(json, key);
         if (start < 0) return "0";
-        start += pattern.length();
-        // Skip whitespace
-        while (start < json.length() && Character.isWhitespace(json.charAt(start))) start++;
         int end = start;
         // Handle optional minus sign
         if (end < json.length() && json.charAt(end) == '-') end++;
@@ -306,8 +402,24 @@ public class LeaderboardClient {
 
     private static int findMatchingBracket(String s, int openIdx) {
         int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
         for (int i = openIdx; i < s.length(); i++) {
             char c = s.charAt(i);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
             if (c == '[') depth++;
             else if (c == ']') {
                 depth--;

@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
+/**
+ * UI panel that displays recorded scores and play history with basic pagination.
+ */
 public class StatsPanel extends JPanel {
     private static final int PAGE_SIZE = 10;
 
@@ -22,6 +25,11 @@ public class StatsPanel extends JPanel {
     private final JButton toggleViewButton;
     private final JLabel highScoreLabel;
 
+    /**
+     * Creates the stats panel.
+     *
+     * @param onBack listener invoked when the user navigates back to the menu
+     */
     public StatsPanel(ActionListener onBack) {
         this.setLayout(new BorderLayout());
         this.setBackground(Color.BLACK);

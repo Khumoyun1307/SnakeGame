@@ -8,6 +8,12 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import com.snakegame.util.ProgressManager;
+
+/**
+ * Main menu panel containing navigation actions for starting games and opening feature panels.
+ *
+ * <p>Also supports unlocking a hidden developer mode via a key sequence.</p>
+ */
 public class MainMenuPanel extends JPanel {
 
     private final ActionListener menuListener;
@@ -16,6 +22,11 @@ public class MainMenuPanel extends JPanel {
     private boolean devButtonAdded = false;
     private JButton continueButton;
 
+    /**
+     * Creates the main menu panel.
+     *
+     * @param menuListener listener invoked for menu button actions
+     */
     public MainMenuPanel(ActionListener menuListener) {
         this.menuListener = menuListener;
         this.setLayout(new GridBagLayout());
@@ -139,6 +150,9 @@ public class MainMenuPanel extends JPanel {
     }
 
 
+    /**
+     * Updates the Continue button visibility and label based on whether a saved game exists.
+     */
     public void refreshContinueButton() {
         if (ProgressManager.hasSavedGame()
                 && (!ProgressManager.isSavedGameDeveloperOnly() || GameSettings.isDeveloperModeEnabled())) {

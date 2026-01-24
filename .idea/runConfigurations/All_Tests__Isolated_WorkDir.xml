@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All Tests (Isolated WorkDir)" type="JUnit" factoryName="JUnit">
+    <module name="Snake Game Full" />
+    <option name="PACKAGE_NAME" value="" />
+    <option name="TEST_OBJECT" value="package" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ci-work" />
+    <option name="VM_PARAMETERS" value="-Djava.awt.headless=true" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

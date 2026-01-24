@@ -7,9 +7,19 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Utility for playing short sound effects from the {@code /sounds} resource directory.
+ *
+ * <p>Playback respects {@link com.snakegame.config.GameSettings#isSoundEnabled()}.</p>
+ */
 public class SoundPlayer {
     private static final Logger log = Logger.getLogger(SoundPlayer.class.getName());
 
+    /**
+     * Plays a sound effect asynchronously using a {@link Clip}.
+     *
+     * @param soundFileName file name under {@code /sounds} (e.g., {@code eatApple.wav})
+     */
     public static void play(String soundFileName) {
         // Respect user setting for sound effects
         if (!GameSettings.isSoundEnabled()) return;

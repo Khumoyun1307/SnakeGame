@@ -12,20 +12,53 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.snakegame.util.AppPaths;
 
+/**
+ * Loads and saves {@link ReplayData} to disk using a simple {@link Properties}-based format.
+ */
 public class ReplayManager {
     private static final Logger log = Logger.getLogger(ReplayManager.class.getName());
 
     private static final String LAST_PATH = AppPaths.REPLAY_LAST_FILE.toString();
     private static final String BEST_PATH = AppPaths.REPLAY_BEST_FILE.toString();
 
+    /**
+     * Returns whether a "last run" replay exists on disk.
+     *
+     * @return {@code true} if the last replay file exists
+     */
     public static boolean hasLast() { return new File(LAST_PATH).exists(); }
+    /**
+     * Returns whether a "best run" replay exists on disk.
+     *
+     * @return {@code true} if the best replay file exists
+     */
     public static boolean hasBest() { return new File(BEST_PATH).exists(); }
 
+    /**
+     * Loads the most recent replay.
+     *
+     * @return optional replay data
+     */
     public static Optional<ReplayData> loadLast() { return load(LAST_PATH); }
+    /**
+     * Loads the best recorded replay (highest score).
+     *
+     * @return optional replay data
+     */
     public static Optional<ReplayData> loadBest() { return load(BEST_PATH); }
 
+    /**
+     * Saves a replay as the "last run" replay.
+     *
+     * @param data replay data to save
+     */
     public static void saveLast(ReplayData data) { save(LAST_PATH, data); }
 
+    /**
+     * Saves the replay as the "best run" replay if it beats the stored best score.
+     *
+     * @param data replay data to consider
+     */
     public static void saveBestIfHigher(ReplayData data) {
         int currentBest = load(BEST_PATH).map(d -> d.finalScore).orElse(-1);
         if (data.finalScore > currentBest) {

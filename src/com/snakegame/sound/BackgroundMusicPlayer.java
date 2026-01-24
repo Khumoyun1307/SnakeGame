@@ -7,6 +7,11 @@ import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Plays looping background music from the {@code /sounds} resource directory.
+ *
+ * <p>Playback respects {@link com.snakegame.config.GameSettings#isMusicEnabled()}.</p>
+ */
 public class BackgroundMusicPlayer {
     private static final Logger log = Logger.getLogger(BackgroundMusicPlayer.class.getName());
     private static Clip clip;

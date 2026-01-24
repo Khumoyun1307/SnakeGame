@@ -6,8 +6,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
+/**
+ * Menu panel that lets the user choose an {@link AiMode} and start an AI run.
+ */
 public class AiModePanel extends JPanel {
 
+    /**
+     * Creates the AI mode selection panel.
+     *
+     * @param onBack callback invoked when navigating back
+     * @param onStart callback invoked with the selected mode to begin an AI run
+     */
     public AiModePanel(Runnable onBack, Consumer<AiMode> onStart) {
         setLayout(new GridBagLayout());
         setBackground(Color.BLACK);

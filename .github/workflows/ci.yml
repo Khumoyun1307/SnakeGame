@@ -14,6 +14,9 @@ jobs:
     env:
       JUNIT_PLATFORM_VERSION: "1.8.1"
       JACOCO_VERSION: "0.8.11"
+      # Coverage gates are intentionally lenient at first; tighten as the suite grows.
+      MIN_FOCUS_LINE_COVERAGE: "0.60"
+      MIN_FOCUS_BRANCH_COVERAGE: "0.45"
 
     steps:
       - name: Checkout
@@ -120,7 +123,123 @@ jobs:
             echo "No ci-out/jacoco.exec found; skipping JaCoCo report."
           fi
 
+      - name: Coverage summary (and gate)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          xml_path = Path("ci-out/coverage/jacoco.xml")
+          summary_path = Path(os.environ.get("GITHUB_STEP_SUMMARY", ""))
+
+          def write_summary(text: str) -> None:
+              if not summary_path:
+                  return
+              summary_path.parent.mkdir(parents=True, exist_ok=True)
+              with summary_path.open("a", encoding="utf-8") as f:
+                  f.write(text)
+
+          if not xml_path.exists():
+              write_summary("## Coverage\n\nNo `ci-out/coverage/jacoco.xml` produced.\n")
+              sys.exit(0)
+
+          root = ET.parse(xml_path).getroot()
+
+          def ratio(missed: int, covered: int) -> float:
+              total = missed + covered
+              return 1.0 if total == 0 else covered / total
+
+          def pct(x: float) -> str:
+              return f\"{x * 100:.1f}%\"
+
+          def counters_from(elem) -> dict[str, tuple[int, int]]:
+              out: dict[str, tuple[int, int]] = {}
+              for c in elem.findall("counter"):
+                  out[c.get("type", "")] = (int(c.get("missed", "0")), int(c.get("covered", "0")))
+              return out
+
+          bundle = counters_from(root)
+
+          focus_prefixes = [
+              "com/snakegame/model",
+              "com/snakegame/ai",
+              "com/snakegame/util",
+              "com/snakegame/config",
+              "com/snakegame/replay",
+              "com/snakegame/controller",
+              "com/snakegame/net",
+          ]
+
+          packages = root.findall("package")
+
+          def sum_for_prefix(prefix: str) -> dict[str, tuple[int, int]]:
+              totals: dict[str, list[int]] = {}
+              for p in packages:
+                  name = p.get("name", "")
+                  if not name.startswith(prefix):
+                      continue
+                  for t, (m, c) in counters_from(p).items():
+                      totals.setdefault(t, [0, 0])
+                      totals[t][0] += m
+                      totals[t][1] += c
+              return {t: (mc[0], mc[1]) for t, mc in totals.items()}
+
+          def sum_focus() -> dict[str, tuple[int, int]]:
+              totals: dict[str, list[int]] = {}
+              for p in packages:
+                  name = p.get("name", "")
+                  if not any(name.startswith(pref) for pref in focus_prefixes):
+                      continue
+                  for t, (m, c) in counters_from(p).items():
+                      totals.setdefault(t, [0, 0])
+                      totals[t][0] += m
+                      totals[t][1] += c
+              return {t: (mc[0], mc[1]) for t, mc in totals.items()}
+
+          def coverage_line_branch(table: dict[str, tuple[int, int]]) -> tuple[float, float]:
+              line = ratio(*table.get("LINE", (0, 0)))
+              branch = ratio(*table.get("BRANCH", (0, 0)))
+              return line, branch
+
+          write_summary("## Coverage (JaCoCo)\n\n")
+          write_summary("| Scope | Lines | Branches | Instructions |\n|---|---:|---:|---:|\n")
+
+          def row(scope: str, table: dict[str, tuple[int, int]]) -> None:
+              line = pct(ratio(*table.get("LINE", (0, 0))))
+              branch = pct(ratio(*table.get("BRANCH", (0, 0))))
+              instr = pct(ratio(*table.get("INSTRUCTION", (0, 0))))
+              write_summary(f\"| {scope} | {line} | {branch} | {instr} |\\n\")
+
+          row("All code", bundle)
+          focus_totals = sum_focus()
+          row("Focus packages", focus_totals)
+          for pref in focus_prefixes:
+              row(pref, sum_for_prefix(pref))
+
+          write_summary("\\nArtifacts: `test-reports` and `coverage` (HTML + XML).\\n")
+
+          min_line = float(os.environ.get("MIN_FOCUS_LINE_COVERAGE", "0") or "0")
+          min_branch = float(os.environ.get("MIN_FOCUS_BRANCH_COVERAGE", "0") or "0")
+          focus_line, focus_branch = coverage_line_branch(focus_totals)
+
+          ok = True
+          if focus_line < min_line:
+              ok = False
+              print(f"FAIL: focus LINE {focus_line:.3f} < {min_line:.3f}")
+          if focus_branch < min_branch:
+              ok = False
+              print(f"FAIL: focus BRANCH {focus_branch:.3f} < {min_branch:.3f}")
+          if not ok:
+              sys.exit(2)
+          PY
+
       - name: Upload test reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
@@ -128,9 +247,9 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: ci-out/coverage
           if-no-files-found: warn
-

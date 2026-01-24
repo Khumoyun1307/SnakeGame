@@ -10,10 +10,20 @@ import com.snakegame.util.ProgressManager;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Swing panel responsible for hosting a live game run.
+ *
+ * <p>Creates a {@link GameState} and {@link GameController}, listens for property-change events used
+ * by {@link com.snakegame.ui.GameFrame} to navigate between cards, and delegates rendering to
+ * {@link GameRenderer}.</p>
+ */
 public class GamePanel extends JPanel {
     private GameState gameState;
     private GameController controller;
 
+    /**
+     * Creates a new game panel starting a fresh run.
+     */
     public GamePanel() {
         this.setPreferredSize(new Dimension(GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT));
         this.setBackground(Color.BLACK);
@@ -21,6 +31,11 @@ public class GamePanel extends JPanel {
         initGame();
     }
 
+    /**
+     * Creates a new game panel and restores state from a saved snapshot.
+     *
+     * @param snapshot saved game snapshot to restore
+     */
     public GamePanel(GameSnapshot snapshot) {
         this.setPreferredSize(new Dimension(GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT));
         this.setBackground(Color.BLACK);
@@ -57,11 +72,15 @@ public class GamePanel extends JPanel {
         this.addKeyListener(controller);
     }
 
+    /**
+     * Requests focus and starts the run's game loop.
+     */
     public void startGame() {
         requestFocusInWindow();
         controller.start();
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);

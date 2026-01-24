@@ -91,22 +91,60 @@ public class ProgressManager {
         return unlockedMaps.contains(id);
     }
 
+    /**
+     * Marks the given map as unlocked and persists progress if it was newly added.
+     *
+     * @param id map id to unlock
+     */
     public static void unlockMap(int id) {
         if (unlockedMaps.add(id)) {
             save();
         }
     }
 
+    /**
+     * Returns a defensive copy of the currently unlocked map ids.
+     *
+     * @return unlocked map ids
+     */
     public static Set<Integer> getUnlockedMaps() {
         return new HashSet<>(unlockedMaps);
     }
 
+    /**
+     * Returns whether a saved game snapshot exists.
+     *
+     * @return {@code true} if a saved game exists
+     */
     public static boolean hasSavedGame() { return GameSaveManager.hasSave(); }
+    /**
+     * Saves the provided snapshot as the current saved game.
+     *
+     * @param snapshot snapshot to save
+     */
     public static void saveGame(GameSnapshot snapshot) { GameSaveManager.save(snapshot); }
+    /**
+     * Loads the current saved game snapshot, if present.
+     *
+     * @return optional saved snapshot
+     */
     public static Optional<GameSnapshot> loadGame() { return GameSaveManager.load(); }
+    /**
+     * Deletes any saved game snapshot.
+     */
     public static void clearSavedGame() { GameSaveManager.clearSave(); }
+    /**
+     * Returns the score stored in the current save, if any.
+     *
+     * @return optional saved score
+     */
     public static OptionalInt getSavedGameScore() { return GameSaveManager.getSavedScore(); }
 
+    /**
+     * Returns whether the saved game refers to a developer-only map selection.
+     *
+     * @return {@code true} if the save should be hidden outside developer mode
+     */
     public static boolean isSavedGameDeveloperOnly() {
         Optional<GameSnapshot> opt = loadGame();
         if (opt.isEmpty()) return false;

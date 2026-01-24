@@ -15,6 +15,12 @@ import java.awt.Component;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+/**
+ * Wires together the simulation, input handling, and loop/flow coordination for a single run.
+ *
+ * <p>This controller listens to keyboard events, records player inputs for deterministic replays,
+ * and delegates tick processing to {@link GameLoop} and {@link GameFlow}.</p>
+ */
 public class GameController implements KeyListener, LoopControl {
 
     private final GameState gameState;
@@ -26,6 +32,15 @@ public class GameController implements KeyListener, LoopControl {
     private final GameFlow gameFlow;
     private final GameLoop gameLoop;
 
+    /**
+     * Creates a new controller for the provided game state.
+     *
+     * @param gameState simulation state for this run
+     * @param repaintCallback invoked after each tick to refresh rendering
+     * @param restartCallback invoked when the user restarts the run
+     * @param goToMainMenuCallback invoked when the run should return to the main menu
+     * @param settingsCallback invoked when the user requests settings from in-game UI
+     */
     public GameController(GameState gameState,
                           Runnable repaintCallback,
                           Runnable restartCallback,
@@ -71,25 +86,39 @@ public class GameController implements KeyListener, LoopControl {
         );
     }
 
+    /**
+     * Starts the underlying timer-driven game loop.
+     */
     public void start() {
         gameLoop.start();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void pause() {
         gameLoop.pause();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void resume() {
         gameLoop.resume();
     }
 
+    /** {@inheritDoc} */
     @Override
     public void stop() {
         gameLoop.stop();
     }
 
+    /**
+     * Handles key presses during gameplay.
+     *
+     * <p>Direction changes are rate-limited to at most one per simulation tick via
+     * {@code inputLocked}. Reverse-controls power-ups invert arrow key mappings.</p>
+     *
+     * @param e key event
+     */
     @Override
     public void keyPressed(KeyEvent e) {
         if (runMode == GameMode.AI && e.getKeyCode() != KeyEvent.VK_SPACE) return;
@@ -117,6 +146,8 @@ public class GameController implements KeyListener, LoopControl {
         }
     }
 
+    /** {@inheritDoc} */
     @Override public void keyReleased(KeyEvent e) { }
+    /** {@inheritDoc} */
     @Override public void keyTyped(KeyEvent e) { }
 }

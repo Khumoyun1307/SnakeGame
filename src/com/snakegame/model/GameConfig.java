@@ -1,5 +1,11 @@
 package com.snakegame.model;
 
+/**
+ * Centralized configuration constants for the simulation and renderer.
+ *
+ * <p>All dimensions are expressed in pixels unless otherwise stated. The game operates on a grid of
+ * {@link #UNIT_SIZE}-sized cells within a {@link #SCREEN_WIDTH} x {@link #SCREEN_HEIGHT} playfield.</p>
+ */
 public class GameConfig {
     public static final int SCREEN_WIDTH = 600;
     public static final int SCREEN_HEIGHT = 600;

@@ -15,6 +15,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
+/**
+ * Main application window that hosts the game and menus using a {@link CardLayout}.
+ *
+ * <p>Switches between panels such as the main menu, gameplay, settings, stats, and replay views.</p>
+ */
 public class GameFrame extends JFrame {
 
     private final CardLayout cardLayout;
@@ -23,6 +28,9 @@ public class GameFrame extends JFrame {
     private MainMenuPanel menuPanel;
     private ReplayPanel replayPanel;
 
+    /**
+     * Creates and displays the main game window.
+     */
     public GameFrame() {
         this.setTitle("Snake");
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);

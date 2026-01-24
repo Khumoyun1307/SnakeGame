@@ -9,6 +9,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Serializable snapshot of a run used for save/continue.
+ *
+ * <p>This object captures enough state to restore gameplay deterministically (snake body, apple,
+ * effects, obstacles, and the gameplay-relevant {@link SettingsSnapshot}). Fields are kept public
+ * intentionally to keep persistence straightforward.</p>
+ */
 public class GameSnapshot implements Serializable {
     // Metadata
     public long savedAtMillis;
@@ -45,10 +52,21 @@ public class GameSnapshot implements Serializable {
     public List<Point> obstacles = new ArrayList<>();
     public List<MovingObstacleSnapshot> movingObstacles = new ArrayList<>();
 
+    /**
+     * Returns the score shown on the main menu "Continue" button.
+     *
+     * @return saved score
+     */
     public int continueLabelScore() {
         return score;
     }
 
+    /**
+     * Captures a snapshot from the provided {@link GameState}.
+     *
+     * @param state current game state to snapshot
+     * @return snapshot representing the current run state
+     */
     public static GameSnapshot captureFrom(GameState state) {
         GameSnapshot s = new GameSnapshot();
         s.savedAtMillis = System.currentTimeMillis();

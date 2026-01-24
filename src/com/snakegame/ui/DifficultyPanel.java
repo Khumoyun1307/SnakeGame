@@ -9,6 +9,9 @@ import java.awt.*;
 import java.util.Hashtable;
 import javax.swing.event.ChangeEvent;
 
+/**
+ * UI panel for configuring difficulty-related settings such as speed and obstacles.
+ */
 public class DifficultyPanel extends JPanel {
     private static final int MIN_DIFFICULTY = 0;
     private static final int MAX_DIFFICULTY = 50;
@@ -28,6 +31,11 @@ public class DifficultyPanel extends JPanel {
     private final JSpinner movingObsCountSpinner;
     private final JCheckBox movingObsAutoIncrement;
 
+    /**
+     * Creates a difficulty/settings panel.
+     *
+     * @param goBack callback invoked when the user returns to the previous screen
+     */
     public DifficultyPanel(Runnable goBack) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(Color.BLACK);

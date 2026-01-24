@@ -3,6 +3,12 @@ package com.snakegame.util;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Centralized file system paths used for local persistence.
+ *
+ * <p>Paths are relative to the working directory and intentionally use simple text files under
+ * {@code data/} for ease of inspection.</p>
+ */
 public final class AppPaths {
     private AppPaths() {}
 
@@ -16,4 +22,3 @@ public final class AppPaths {
 
     public static final Path SCORES_FILE = Paths.get("scores.txt");
 }
-

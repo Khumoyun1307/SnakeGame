@@ -10,6 +10,14 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+/**
+ * Deterministic core simulation for a single Snake run.
+ *
+ * <p>The simulation advances in discrete ticks via {@link #update()}, emitting {@link GameEvent}s
+ * for side effects such as sound, persistence, and UI transitions. To keep replays stable,
+ * time-based effects are tracked in ticks rather than wall-clock time, and a seeded {@link Random}
+ * drives all randomness.</p>
+ */
 public class GameState {
     private Snake snake;
     private Apple apple;
@@ -58,10 +66,23 @@ public class GameState {
     private final Random rng;
     private final long seed;
 
+    /**
+     * Creates a game state with the provided seed and playback mode.
+     *
+     * @param seed seed for deterministic RNG
+     * @param watchOnly whether this instance is used for watch-only replay
+     */
     public GameState(long seed, boolean watchOnly) {
         this(seed, watchOnly, null);
     }
 
+    /**
+     * Creates a game state configured with a frozen settings snapshot.
+     *
+     * @param seed seed for deterministic RNG
+     * @param watchOnly whether this instance is used for watch-only replay
+     * @param runSettingsSnapshot run settings snapshot (defaults to {@link GameSettings#snapshot()} when {@code null})
+     */
     public GameState(long seed, boolean watchOnly, SettingsSnapshot runSettingsSnapshot) {
         this.seed = seed;
         this.watchOnly = watchOnly;
@@ -71,11 +92,19 @@ public class GameState {
         initGame();
     }
 
+    /**
+     * Creates a playable run with a fixed seed.
+     *
+     * @param seed seed for deterministic RNG
+     */
     public GameState(long seed) {
         this(seed, false, null);
     }
 
     /** Backwards compatible default: deterministic *per run* but seed is random. */
+    /**
+     * Creates a new run seeded from {@link System#nanoTime()}.
+     */
     public GameState() {
         this(System.nanoTime(), false, null);
     }
@@ -112,9 +141,19 @@ public class GameState {
 
     // ---------------------------------------------------------------------
 
+    /**
+     * Returns the RNG seed used for this run.
+     *
+     * @return seed
+     */
     public long getSeed() { return seed; }
     Random rng() { return rng; } // package-private helper if needed later
 
+    /**
+     * Sets the duration (in milliseconds) represented by a single simulation tick.
+     *
+     * @param tickMs tick duration in milliseconds (values <= 0 are clamped to 1)
+     */
     public void setTickMs(int tickMs) {
         this.tickMs = Math.max(1, tickMs);
         if (this.apple != null) {
@@ -122,6 +161,11 @@ public class GameState {
         }
     }
 
+    /**
+     * Returns the current simulation tick.
+     *
+     * @return tick counter
+     */
     public long getTick() { return tick; }
 
     private long ticksFromMs(long ms) {
@@ -219,6 +263,13 @@ public class GameState {
         reverseEndTick = 0;
     }
 
+    /**
+     * Advances the simulation by one tick.
+     *
+     * <p>This method updates effects, moves obstacles and the snake, applies wrap-around, handles
+     * apple consumption/spawning, checks collisions, and records any {@link GameEvent}s emitted for
+     * the tick. Call {@link #consumeEvents()} after updating to retrieve and clear emitted events.</p>
+     */
     public void update() {
         if (!running) return;
 
@@ -242,6 +293,7 @@ public class GameState {
         snake.move(ateApple);
 
         Point head = snake.getHead();
+        // Wrap head position around screen edges (toroidal playfield).
         int maxX = GameConfig.SCREEN_WIDTH / GameConfig.UNIT_SIZE;
         int maxY = GameConfig.SCREEN_HEIGHT / GameConfig.UNIT_SIZE;
 
@@ -392,21 +444,96 @@ public class GameState {
     }
 
     // Getters
+    /**
+     * Returns whether the simulation is still running (not game over).
+     *
+     * @return {@code true} if running
+     */
     public boolean isRunning() { return running; }
+    /**
+     * Returns the current score.
+     *
+     * @return score
+     */
     public int getScore() { return score; }
+    /**
+     * Returns the snake instance.
+     *
+     * @return snake
+     */
     public Snake getSnake() { return snake; }
+    /**
+     * Returns the current apple.
+     *
+     * @return apple
+     */
     public Apple getApple() { return apple; }
+    /**
+     * Returns whether the double-score effect is currently active.
+     *
+     * @return {@code true} if double score is active
+     */
     public boolean isDoubleScoreActive() { return doubleScoreActive; }
 
+    /**
+     * Returns the tick when the double-score effect ends.
+     *
+     * @return end tick
+     */
     public long getDoubleScoreEndTime() { return doubleScoreEndTick; }
+    /**
+     * Returns whether the slowdown effect is currently active.
+     *
+     * @return {@code true} if slowed
+     */
     public boolean isSlowed() { return slowed; }
+    /**
+     * Returns the tick when the slowdown effect ends.
+     *
+     * @return end tick
+     */
     public long getSlowEndTime() { return slowEndTick; }
+    /**
+     * Returns whether reverse-controls is currently active.
+     *
+     * @return {@code true} if controls are reversed
+     */
     public boolean isReversedControls() { return reversedControls; }
+    /**
+     * Returns the static obstacles currently in the world.
+     *
+     * @return obstacle positions (pixel coordinates)
+     */
     public List<Point> getObstacles() { return obstacles; }
+    /**
+     * Returns the current transient unlock message, if any.
+     *
+     * @return unlock message or {@code null}
+     */
     public String getUnlockMessage() { return unlockMessage; }
+    /**
+     * Returns the list of moving obstacles.
+     *
+     * @return moving obstacles
+     */
     public List<MovingObstacle> getMovingObstacles() { return movingObstacles; }
+    /**
+     * Returns the current map id for map-based modes.
+     *
+     * @return current map id
+     */
     public int getCurrentMapId() { return currentMapId; }
+    /**
+     * Returns the frozen settings snapshot captured for this run.
+     *
+     * @return run settings snapshot
+     */
     public SettingsSnapshot getRunSettingsSnapshot() { return runSettingsSnapshot; }
+    /**
+     * Returns and clears the events emitted during the last tick.
+     *
+     * @return list of events (possibly empty)
+     */
     public List<GameEvent> consumeEvents() {
         if (pendingEvents.isEmpty()) return List.of();
         List<GameEvent> out = new ArrayList<>(pendingEvents);
@@ -414,14 +541,47 @@ public class GameState {
         return out;
     }
 
+    /**
+     * Applies a direction change to the snake.
+     *
+     * @param direction new direction
+     */
     public void setDirection(Direction direction) { snake.setDirection(direction); }
 
+    /**
+     * Returns the tick when the reverse-controls effect ends.
+     *
+     * @return end tick
+     */
     public long getReverseEndTime() { return reverseEndTick; }
 
+    /**
+     * Returns the number of apples eaten in the current run.
+     *
+     * @return apples eaten
+     */
     public int getApplesEaten() { return applesEaten; }
+    /**
+     * Returns the current tick duration in milliseconds.
+     *
+     * @return tick duration in milliseconds
+     */
     public int getTickMs() { return tickMs; }
+    /**
+     * Returns the accumulated simulation time in milliseconds.
+     *
+     * @return elapsed simulation time in milliseconds
+     */
     public long getElapsedSimTimeMs() { return elapsedSimTimeMs; }
 
+    /**
+     * Restores this game state from a saved snapshot.
+     *
+     * <p>This method updates global {@link GameSettings} from the snapshot and aligns this instance's
+     * frozen run settings and map id with the loaded data.</p>
+     *
+     * @param snap snapshot to restore
+     */
     public void restore(GameSnapshot snap) {
         if (snap.settingsSnapshot != null) {
             GameSettings.restore(snap.settingsSnapshot);

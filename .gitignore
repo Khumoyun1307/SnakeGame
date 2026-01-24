@@ -40,4 +40,4 @@ dist/
 .ci-lib/
 ci-out/
 ci-work/
-
+!ci-work/.gitkeep

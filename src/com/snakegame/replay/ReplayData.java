@@ -4,6 +4,12 @@ import com.snakegame.config.SettingsSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Serializable data model for a recorded run replay.
+ *
+ * <p>Replays store the run seed, final score, a settings snapshot captured at the start of the run,
+ * and a list of tick-indexed input events.</p>
+ */
 public class ReplayData {
     public static final int CURRENT_VERSION = 2;
 
