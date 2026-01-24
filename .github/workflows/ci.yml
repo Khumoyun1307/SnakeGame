@@ -155,7 +155,7 @@ jobs:
               return 1.0 if total == 0 else covered / total
 
           def pct(x: float) -> str:
-              return f\"{x * 100:.1f}%\"
+              return f"{x * 100:.1f}%"
 
           def counters_from(elem) -> dict[str, tuple[int, int]]:
               out: dict[str, tuple[int, int]] = {}
@@ -213,7 +213,7 @@ jobs:
               line = pct(ratio(*table.get("LINE", (0, 0))))
               branch = pct(ratio(*table.get("BRANCH", (0, 0))))
               instr = pct(ratio(*table.get("INSTRUCTION", (0, 0))))
-              write_summary(f\"| {scope} | {line} | {branch} | {instr} |\\n\")
+              write_summary(f"| {scope} | {line} | {branch} | {instr} |\\n")
 
           row("All code", bundle)
           focus_totals = sum_focus()
