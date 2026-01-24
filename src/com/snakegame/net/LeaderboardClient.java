@@ -52,6 +52,7 @@ public class LeaderboardClient {
     // ---------------- Submit Score ----------------
 
     public CompletableFuture<Void> submitScoreAsync(
+            UUID playerId,
             String playerName,
             int score,
             int mapId,
@@ -63,13 +64,14 @@ public class LeaderboardClient {
         if (sessionId == null || sessionToken == null) {
             return startSessionAsync()
                     .thenCompose(v -> doSubmit(
-                            playerName, score, mapId, mode, difficulty, timeSurvivedMs, gameVersion
+                            playerId, playerName, score, mapId, mode, difficulty, timeSurvivedMs, gameVersion
                     ));
         }
-        return doSubmit(playerName, score, mapId, mode, difficulty, timeSurvivedMs, gameVersion);
+        return doSubmit(playerId, playerName, score, mapId, mode, difficulty, timeSurvivedMs, gameVersion);
     }
 
     private CompletableFuture<Void> doSubmit(
+            UUID playerId,
             String playerName,
             int score,
             int mapId,
@@ -80,6 +82,7 @@ public class LeaderboardClient {
     ) {
         String json = """
                 {
+                  "playerId": "%s",
                   "playerName": "%s",
                   "score": %d,
                   "mapId": %d,
@@ -89,6 +92,7 @@ public class LeaderboardClient {
                   "gameVersion": "%s"
                 }
                 """.formatted(
+                playerId,
                 escape(playerName),
                 score,
                 mapId,

@@ -57,6 +57,7 @@ public class GameSaveManager {
             p.setProperty("musicEnabled", String.valueOf(ss.musicEnabled()));
             p.setProperty("showGrid", String.valueOf(ss.showGrid()));
             p.setProperty("playerName", ss.playerName() == null ? "Player" : ss.playerName());
+            p.setProperty("playerId", ss.playerId() == null ? "" : ss.playerId().toString());
             p.setProperty("theme", ss.selectedTheme().name());
             p.setProperty("movingObstaclesEnabled", String.valueOf(ss.movingObstaclesEnabled()));
             p.setProperty("movingObstacleCount", String.valueOf(ss.movingObstacleCount()));
@@ -122,6 +123,18 @@ public class GameSaveManager {
             s.savedAtMillis = Long.parseLong(p.getProperty("savedAtMillis", "0"));
 
             // restore SettingsSnapshot
+            java.util.UUID playerId;
+            String playerIdValue = p.getProperty("playerId", "");
+            if (playerIdValue != null && !playerIdValue.isBlank()) {
+                try {
+                    playerId = java.util.UUID.fromString(playerIdValue);
+                } catch (IllegalArgumentException e) {
+                    playerId = GameSettings.getPlayerId();
+                }
+            } else {
+                playerId = GameSettings.getPlayerId();
+            }
+
             SettingsSnapshot ss = new SettingsSnapshot(
                     Integer.parseInt(p.getProperty("difficultyLevel", "20")),
                     Boolean.parseBoolean(p.getProperty("obstaclesEnabled", "false")),
@@ -132,6 +145,7 @@ public class GameSaveManager {
                     Boolean.parseBoolean(p.getProperty("musicEnabled", "true")),
                     Boolean.parseBoolean(p.getProperty("showGrid", "true")),
                     p.getProperty("playerName", "Player"),
+                    playerId,
                     GameSettings.Theme.valueOf(p.getProperty("theme", "RETRO")),
                     Boolean.parseBoolean(p.getProperty("movingObstaclesEnabled", "false")),
                     Integer.parseInt(p.getProperty("movingObstacleCount", "0")),

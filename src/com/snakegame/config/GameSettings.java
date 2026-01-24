@@ -3,6 +3,7 @@ package com.snakegame.config;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.GameConfig;
 import com.snakegame.ai.AiMode;
+import java.util.UUID;
 
 public class GameSettings {
     public enum Difficulty { EASY, NORMAL, HARD, EXPERT, INSANE }
@@ -27,6 +28,7 @@ public class GameSettings {
     private static boolean musicEnabled = true;
     private static boolean showGrid = true;
     private static String playerName = "Player";
+    private static UUID playerId;
 
     private static boolean movingObstaclesEnabled = false;
     private static int movingObstacleCount = GameConfig.DEFAULT_MOVING_OBSTACLE_COUNT;
@@ -106,6 +108,21 @@ public class GameSettings {
         }
     }
 
+    public static UUID getPlayerId() { return ensurePlayerId(); }
+    public static void setPlayerId(UUID id) {
+        if (id != null) {
+            playerId = id;
+            GameSettingsManager.save();
+        }
+    }
+
+    public static UUID ensurePlayerId() {
+        if (playerId == null) {
+            playerId = UUID.randomUUID();
+        }
+        return playerId;
+    }
+
     public static int getSpeedDelayFromDifficultyLevel() {
         return (int) (BEGINNER_DELAY - (difficultyLevel * DIFFICULTY_CONVERSION_MULTIPLIER));
     }
@@ -153,6 +170,7 @@ public class GameSettings {
                 musicEnabled,
                 showGrid,
                 playerName,
+                getPlayerId(),
                 selectedTheme,
                 movingObstaclesEnabled,
                 movingObstacleCount,
@@ -171,6 +189,7 @@ public class GameSettings {
         musicEnabled                 = s.musicEnabled();
         showGrid                     = s.showGrid();
         playerName                   = s.playerName();
+        playerId                     = s.playerId();
         selectedTheme                = s.selectedTheme();
         movingObstaclesEnabled       = s.movingObstaclesEnabled();
         movingObstacleCount          = s.movingObstacleCount();

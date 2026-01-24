@@ -61,6 +61,7 @@ public class ReplayManager {
         p.setProperty("musicEnabled", String.valueOf(s.musicEnabled()));
         p.setProperty("showGrid", String.valueOf(s.showGrid()));
         p.setProperty("playerName", s.playerName() == null ? "Player" : s.playerName());
+        p.setProperty("playerId", s.playerId() == null ? "" : s.playerId().toString());
         p.setProperty("theme", s.selectedTheme().name());
         p.setProperty("movingObstaclesEnabled", String.valueOf(s.movingObstaclesEnabled()));
         p.setProperty("movingObstacleCount", String.valueOf(s.movingObstacleCount()));
@@ -94,6 +95,18 @@ public class ReplayManager {
             d.seed = Long.parseLong(p.getProperty("seed", "0"));
             d.finalScore = Integer.parseInt(p.getProperty("finalScore", "0"));
 
+            java.util.UUID playerId;
+            String playerIdValue = p.getProperty("playerId", "");
+            if (playerIdValue != null && !playerIdValue.isBlank()) {
+                try {
+                    playerId = java.util.UUID.fromString(playerIdValue);
+                } catch (IllegalArgumentException e) {
+                    playerId = GameSettings.getPlayerId();
+                }
+            } else {
+                playerId = GameSettings.getPlayerId();
+            }
+
             SettingsSnapshot ss = new SettingsSnapshot(
                     Integer.parseInt(p.getProperty("difficultyLevel", "20")),
                     Boolean.parseBoolean(p.getProperty("obstaclesEnabled", "false")),
@@ -104,6 +117,7 @@ public class ReplayManager {
                     Boolean.parseBoolean(p.getProperty("musicEnabled", "true")),
                     Boolean.parseBoolean(p.getProperty("showGrid", "true")),
                     p.getProperty("playerName", "Player"),
+                    playerId,
                     GameSettings.Theme.valueOf(p.getProperty("theme", "RETRO")),
                     Boolean.parseBoolean(p.getProperty("movingObstaclesEnabled", "false")),
                     Integer.parseInt(p.getProperty("movingObstacleCount", "0")),

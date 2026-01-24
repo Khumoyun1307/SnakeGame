@@ -73,6 +73,7 @@ public class ScoreManager {
         }
 
         leaderboardClient.submitScoreAsync(
+                GameSettings.getPlayerId(),
                 GameSettings.getPlayerName(),
                 score,
                 mapIdToSubmit,

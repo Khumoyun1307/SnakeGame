@@ -99,6 +99,13 @@ public class SettingsPanel extends JPanel {
         content.add(gridCheck);
         content.add(Box.createVerticalStrut(20));
         content.add(buttonPanel);
+        content.add(Box.createVerticalStrut(10));
+
+        JLabel uuidLabel = new JLabel("Player UUID: " + GameSettings.getPlayerId());
+        uuidLabel.setForeground(Color.LIGHT_GRAY);
+        uuidLabel.setFont(new Font("Consolas", Font.PLAIN, 12));
+        uuidLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        content.add(uuidLabel);
 
         add(content, BorderLayout.CENTER);
     }

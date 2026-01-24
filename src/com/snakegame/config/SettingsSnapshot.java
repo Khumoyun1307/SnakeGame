@@ -12,6 +12,7 @@ public record SettingsSnapshot(
         boolean musicEnabled,
         boolean showGrid,
         String playerName,
+        java.util.UUID playerId,
         GameSettings.Theme selectedTheme,
         boolean movingObstaclesEnabled,
         int movingObstacleCount,

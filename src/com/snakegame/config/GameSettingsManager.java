@@ -18,11 +18,26 @@ public class GameSettingsManager {
 
     public static void load() {
         File file = new File(FILE_PATH);
-        if (!file.exists()) return;
+        if (!file.exists()) {
+            GameSettings.ensurePlayerId();
+            GameSettingsManager.save();
+            return;
+        }
 
         try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8))  {
             Properties props = new Properties();
             props.load(reader);
+
+            String playerIdValue = props.getProperty("playerId", "");
+            if (playerIdValue != null && !playerIdValue.isBlank()) {
+                try {
+                    GameSettings.setPlayerId(java.util.UUID.fromString(playerIdValue));
+                } catch (IllegalArgumentException e) {
+                    GameSettings.ensurePlayerId();
+                }
+            } else {
+                GameSettings.ensurePlayerId();
+            }
 
             GameSettings.setDifficultyLevel(
                     Integer.parseInt(props.getProperty("difficultyLevel", "20"))
@@ -107,6 +122,7 @@ public class GameSettingsManager {
             props.setProperty("musicEnabled", String.valueOf(GameSettings.isMusicEnabled()));
             props.setProperty("showGrid", String.valueOf(GameSettings.isShowGrid()));
             props.setProperty("playerName", GameSettings.getPlayerName());
+            props.setProperty("playerId", String.valueOf(GameSettings.getPlayerId()));
             props.setProperty("theme", GameSettings.getSelectedTheme().name());
             props.setProperty("movingObstaclesEnabled",
                     String.valueOf(GameSettings.isMovingObstaclesEnabled()));
