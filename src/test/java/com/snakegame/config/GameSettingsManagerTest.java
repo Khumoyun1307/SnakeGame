@@ -3,6 +3,7 @@ package com.snakegame.config;
 import com.snakegame.mode.GameMode;
 import com.snakegame.testutil.FileBackups;
 import com.snakegame.testutil.SettingsGuard;
+import com.snakegame.util.AppPaths;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class GameSettingsManagerTest {
 
-    private static final Path SETTINGS_PATH = Path.of("data", "settings.txt");
+    private static final Path SETTINGS_PATH = AppPaths.SETTINGS_FILE;
 
     @Test
     void load_createsFileIfMissing() throws IOException {

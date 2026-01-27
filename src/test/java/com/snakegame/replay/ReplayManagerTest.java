@@ -6,6 +6,7 @@ import com.snakegame.mode.GameMode;
 import com.snakegame.model.Direction;
 import com.snakegame.testutil.FileBackups;
 import com.snakegame.testutil.SettingsGuard;
+import com.snakegame.util.AppPaths;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -21,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ReplayManagerTest {
 
-    private static final Path LAST_PATH = Path.of("data", "replay_last.txt");
-    private static final Path BEST_PATH = Path.of("data", "replay_best.txt");
+    private static final Path LAST_PATH = AppPaths.REPLAY_LAST_FILE;
+    private static final Path BEST_PATH = AppPaths.REPLAY_BEST_FILE;
 
     private static SettingsSnapshot settingsSnapshot() {
         return new SettingsSnapshot(
