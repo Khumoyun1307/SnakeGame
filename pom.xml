@@ -11,7 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>23</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
     </properties>
 
@@ -45,12 +45,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <!-- Your tests use AWT BufferedImage; keep them stable in CI -->
                     <systemPropertyVariables>
                         <java.awt.headless>true</java.awt.headless>
                     </systemPropertyVariables>
-
-                    <!-- Prevent tests from writing into repo root (they use data/settings.txt etc.) -->
                     <workingDirectory>${project.build.directory}/test-work</workingDirectory>
                 </configuration>
             </plugin>

@@ -1,0 +1,94 @@
+name: CD - Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  jar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR
+        run: ./mvnw -B clean package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar
+          path: target/SnakeGame.jar
+
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR
+        run: ./mvnw -B clean package -DskipTests
+        shell: bash
+
+      - name: Install WiX (needed for jpackage exe)
+        run: choco install wixtoolset -y
+        shell: powershell
+
+      - name: Build EXE with jpackage
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          # Put your ico here in repo:
+          # packaging/windows/snake_icon.ico
+          $icon = "packaging/windows/snake_icon.ico"
+
+          jpackage `
+            --type exe `
+            --name "SnakeGame" `
+            --input "target" `
+            --main-jar "SnakeGame.jar" `
+            --main-class "com.snakegame.SnakeGame" `
+            --icon $icon `
+            --dest "dist" `
+            --win-shortcut `
+            --win-menu `
+            --win-dir-chooser
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe
+          path: dist/*.exe
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [jar, exe]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/jar/SnakeGame.jar
+            release-assets/exe/*.exe

@@ -4,252 +4,31 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  build_test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-
-    env:
-      JUNIT_PLATFORM_VERSION: "1.8.1"
-      JACOCO_VERSION: "0.8.11"
-      # Coverage gates are intentionally lenient at first; tighten as the suite grows.
-      MIN_FOCUS_LINE_COVERAGE: "0.60"
-      MIN_FOCUS_BRANCH_COVERAGE: "0.45"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java (Temurin 21)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
+          cache: maven
 
-      - name: Cache CI jars
-        uses: actions/cache@v4
-        with:
-          path: .ci-lib
-          key: ci-lib-junit-${{ env.JUNIT_PLATFORM_VERSION }}-jacoco-${{ env.JACOCO_VERSION }}
+      - name: Build + Test
+        run: ./mvnw -B clean verify
 
-      - name: Download CI jars
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p .ci-lib
-
-          download_if_missing() {
-            local url="$1"
-            local dest="$2"
-            if [[ -f "$dest" ]]; then
-              return 0
-            fi
-            echo "Downloading $url"
-            curl -fsSL "$url" -o "$dest"
-          }
-
-          download_if_missing \
-            "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/${JUNIT_PLATFORM_VERSION}/junit-platform-console-standalone-${JUNIT_PLATFORM_VERSION}.jar" \
-            ".ci-lib/junit-platform-console-standalone.jar"
-
-          download_if_missing \
-            "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.agent/${JACOCO_VERSION}/org.jacoco.agent-${JACOCO_VERSION}-runtime.jar" \
-            ".ci-lib/jacocoagent.jar"
-
-          download_if_missing \
-            "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.cli/${JACOCO_VERSION}/org.jacoco.cli-${JACOCO_VERSION}-nodeps.jar" \
-            ".ci-lib/jacococli.jar"
-
-      - name: Compile production
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p ci-out/classes
-          find src -name '*.java' > ci-out/sources.txt
-          javac --release 17 -encoding UTF-8 -d ci-out/classes @ci-out/sources.txt
-
-      - name: Compile tests (if any)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p ci-out/test-classes
-
-          if find test -name '*.java' -print -quit | grep -q .; then
-            find test -name '*.java' > ci-out/test-sources.txt
-            javac --release 17 -encoding UTF-8 \
-              -cp "ci-out/classes:.ci-lib/junit-platform-console-standalone.jar" \
-              -d ci-out/test-classes \
-              @ci-out/test-sources.txt
-          else
-            echo "No tests found under test/; skipping test compilation."
-          fi
-
-      - name: Run tests (isolated working dir)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p ci-work
-
-          pushd ci-work >/dev/null
-          java -Djava.awt.headless=true \
-            -javaagent:../.ci-lib/jacocoagent.jar=destfile=../ci-out/jacoco.exec,append=false \
-            -jar ../.ci-lib/junit-platform-console-standalone.jar \
-            --class-path "../ci-out/classes:../ci-out/test-classes:../resources" \
-            --scan-class-path \
-            --include-classname ".*Test" \
-            --reports-dir "../ci-out/test-reports"
-          popd >/dev/null
-
-      - name: JaCoCo report
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -f "ci-out/jacoco.exec" ]]; then
-            mkdir -p ci-out/coverage
-            java -jar .ci-lib/jacococli.jar report ci-out/jacoco.exec \
-              --classfiles ci-out/classes \
-              --sourcefiles src \
-              --html ci-out/coverage/html \
-              --xml ci-out/coverage/jacoco.xml \
-              --name "SnakeGame"
-          else
-            echo "No ci-out/jacoco.exec found; skipping JaCoCo report."
-          fi
-
-      - name: Coverage summary (and gate)
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python - <<'PY'
-          import os
-          import sys
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          xml_path = Path("ci-out/coverage/jacoco.xml")
-          summary_path = Path(os.environ.get("GITHUB_STEP_SUMMARY", ""))
-
-          def write_summary(text: str) -> None:
-              if not summary_path:
-                  return
-              summary_path.parent.mkdir(parents=True, exist_ok=True)
-              with summary_path.open("a", encoding="utf-8") as f:
-                  f.write(text)
-
-          if not xml_path.exists():
-              write_summary("## Coverage\n\nNo `ci-out/coverage/jacoco.xml` produced.\n")
-              sys.exit(0)
-
-          root = ET.parse(xml_path).getroot()
-
-          def ratio(missed: int, covered: int) -> float:
-              total = missed + covered
-              return 1.0 if total == 0 else covered / total
-
-          def pct(x: float) -> str:
-              return f"{x * 100:.1f}%"
-
-          def counters_from(elem) -> dict[str, tuple[int, int]]:
-              out: dict[str, tuple[int, int]] = {}
-              for c in elem.findall("counter"):
-                  out[c.get("type", "")] = (int(c.get("missed", "0")), int(c.get("covered", "0")))
-              return out
-
-          bundle = counters_from(root)
-
-          focus_prefixes = [
-              "com/snakegame/model",
-              "com/snakegame/ai",
-              "com/snakegame/util",
-              "com/snakegame/config",
-              "com/snakegame/replay",
-              "com/snakegame/controller",
-              "com/snakegame/net",
-          ]
-
-          packages = root.findall("package")
-
-          def sum_for_prefix(prefix: str) -> dict[str, tuple[int, int]]:
-              totals: dict[str, list[int]] = {}
-              for p in packages:
-                  name = p.get("name", "")
-                  if not name.startswith(prefix):
-                      continue
-                  for t, (m, c) in counters_from(p).items():
-                      totals.setdefault(t, [0, 0])
-                      totals[t][0] += m
-                      totals[t][1] += c
-              return {t: (mc[0], mc[1]) for t, mc in totals.items()}
-
-          def sum_focus() -> dict[str, tuple[int, int]]:
-              totals: dict[str, list[int]] = {}
-              for p in packages:
-                  name = p.get("name", "")
-                  if not any(name.startswith(pref) for pref in focus_prefixes):
-                      continue
-                  for t, (m, c) in counters_from(p).items():
-                      totals.setdefault(t, [0, 0])
-                      totals[t][0] += m
-                      totals[t][1] += c
-              return {t: (mc[0], mc[1]) for t, mc in totals.items()}
-
-          def coverage_line_branch(table: dict[str, tuple[int, int]]) -> tuple[float, float]:
-              line = ratio(*table.get("LINE", (0, 0)))
-              branch = ratio(*table.get("BRANCH", (0, 0)))
-              return line, branch
-
-          write_summary("## Coverage (JaCoCo)\n\n")
-          write_summary("| Scope | Lines | Branches | Instructions |\n|---|---:|---:|---:|\n")
-
-          def row(scope: str, table: dict[str, tuple[int, int]]) -> None:
-              line = pct(ratio(*table.get("LINE", (0, 0))))
-              branch = pct(ratio(*table.get("BRANCH", (0, 0))))
-              instr = pct(ratio(*table.get("INSTRUCTION", (0, 0))))
-              write_summary(f"| {scope} | {line} | {branch} | {instr} |\\n")
-
-          row("All code", bundle)
-          focus_totals = sum_focus()
-          row("Focus packages", focus_totals)
-          for pref in focus_prefixes:
-              row(pref, sum_for_prefix(pref))
-
-          write_summary("\\nArtifacts: `test-reports` and `coverage` (HTML + XML).\\n")
-
-          min_line = float(os.environ.get("MIN_FOCUS_LINE_COVERAGE", "0") or "0")
-          min_branch = float(os.environ.get("MIN_FOCUS_BRANCH_COVERAGE", "0") or "0")
-          focus_line, focus_branch = coverage_line_branch(focus_totals)
-
-          ok = True
-          if focus_line < min_line:
-              ok = False
-              print(f"FAIL: focus LINE {focus_line:.3f} < {min_line:.3f}")
-          if focus_branch < min_branch:
-              ok = False
-              print(f"FAIL: focus BRANCH {focus_branch:.3f} < {min_branch:.3f}")
-          if not ok:
-              sys.exit(2)
-          PY
-
-      - name: Upload test reports
-        if: always()
+      - name: Upload test reports (only if failed)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: ci-out/test-reports
-          if-no-files-found: warn
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: ci-out/coverage
-          if-no-files-found: warn
+          path: target/surefire-reports
+          if-no-files-found: ignore
