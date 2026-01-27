@@ -135,9 +135,6 @@ public class ReplayPanel extends JPanel {
         gameCanvas.setDoubleBuffered(true);
 
         add(gameCanvas, BorderLayout.CENTER);
-
-        // initial load (fine)
-        loadReplay(ReplayManager.loadLast());
     }
 
     /**
