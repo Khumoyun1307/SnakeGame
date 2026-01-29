@@ -129,6 +129,11 @@ public class ProgressManager {
      * @return optional saved snapshot
      */
     public static Optional<GameSnapshot> loadGame() { return GameSaveManager.load(); }
+
+    /**
+     * Begins a safe "Continue" flow that only clears the save after gameplay successfully starts.
+     */
+    public static Optional<GameSaveManager.ContinueSession> beginContinue() { return GameSaveManager.beginContinue(); }
     /**
      * Deletes any saved game snapshot.
      */

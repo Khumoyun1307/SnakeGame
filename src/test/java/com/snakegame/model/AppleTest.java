@@ -1,5 +1,6 @@
 package com.snakegame.model;
 
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Point;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link Apple}.
  */
-class AppleTest {
+class AppleTest extends SnakeTestBase {
 
     @Test
     void spawnNew_placesAppleOnGridAndWithinBounds() {

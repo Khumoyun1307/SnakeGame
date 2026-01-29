@@ -14,6 +14,7 @@ public final class AppPaths {
     private AppPaths() {}
 
     private static final String APP_DIR_NAME = "SnakeGame";
+    private static final String APP_DIR_OVERRIDE_PROPERTY = "snakegame.appDir";
 
     /** Root directory for all per-user persisted files. */
     public static final Path APP_DIR = resolveAppDir();
@@ -29,6 +30,15 @@ public final class AppPaths {
     public static final Path SCORES_FILE = APP_DIR.resolve("scores.txt");
 
     private static Path resolveAppDir() {
+        String override = System.getProperty(APP_DIR_OVERRIDE_PROPERTY);
+        if (override != null && !override.isBlank()) {
+            try {
+                return Paths.get(override).toAbsolutePath().normalize();
+            } catch (Exception ignored) {
+                // Fall through to OS-specific defaults.
+            }
+        }
+
         String os = System.getProperty("os.name", "");
         String home = System.getProperty("user.home", "");
         String osLower = os.toLowerCase(Locale.ROOT);

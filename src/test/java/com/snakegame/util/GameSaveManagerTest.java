@@ -4,6 +4,7 @@ import com.snakegame.config.GameSettings;
 import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.*;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.util.GameSaveManager}.
  */
-class GameSaveManagerTest {
+class GameSaveManagerTest extends SnakeTestBase {
 
     @TempDir
     Path tmp;
@@ -125,6 +126,86 @@ class GameSaveManagerTest {
                 logger.setLevel(prevLevel);
             }
             assertFalse(GameSaveManager.hasSave(), "Corrupted save should be cleared");
+        }
+    }
+
+    @Test
+    void beginContinue_restoresSaveWhenNotCommitted() throws Exception {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path savePath = tmp.resolve("savegame.txt");
+            GameSaveManager.setFilePath(savePath.toString());
+
+            GameSnapshot snap = new GameSnapshot();
+            snap.settingsSnapshot = new SettingsSnapshot(
+                    20,
+                    false,
+                    GameMode.STANDARD,
+                    1,
+                    20,
+                    false,
+                    false,
+                    false,
+                    "Tester",
+                    UUID.randomUUID(),
+                    GameSettings.Theme.RETRO,
+                    false,
+                    0,
+                    false,
+                    false
+            );
+            snap.mode = snap.settingsSnapshot.currentMode();
+            snap.selectedMapId = snap.settingsSnapshot.selectedMapId();
+            snap.score = 42;
+
+            GameSaveManager.save(snap);
+            assertTrue(GameSaveManager.hasSave());
+
+            try (var session = GameSaveManager.beginContinue().orElseThrow()) {
+                assertEquals(42, session.snapshot().score);
+                // do not commit
+            }
+
+            assertTrue(GameSaveManager.hasSave(), "Save should be restored when continue is not committed");
+            assertEquals(42, GameSaveManager.load().orElseThrow().score);
+        }
+    }
+
+    @Test
+    void beginContinue_clearsSaveWhenCommitted() throws Exception {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path savePath = tmp.resolve("savegame.txt");
+            GameSaveManager.setFilePath(savePath.toString());
+
+            GameSnapshot snap = new GameSnapshot();
+            snap.settingsSnapshot = new SettingsSnapshot(
+                    20,
+                    false,
+                    GameMode.STANDARD,
+                    1,
+                    20,
+                    false,
+                    false,
+                    false,
+                    "Tester",
+                    UUID.randomUUID(),
+                    GameSettings.Theme.RETRO,
+                    false,
+                    0,
+                    false,
+                    false
+            );
+            snap.mode = snap.settingsSnapshot.currentMode();
+            snap.selectedMapId = snap.settingsSnapshot.selectedMapId();
+            snap.score = 99;
+
+            GameSaveManager.save(snap);
+            assertTrue(GameSaveManager.hasSave());
+
+            try (var session = GameSaveManager.beginContinue().orElseThrow()) {
+                session.commit();
+            }
+
+            assertFalse(GameSaveManager.hasSave(), "Save should be cleared only after continue is committed");
         }
     }
 }

@@ -18,41 +18,63 @@ import com.snakegame.util.AppPaths;
 public class ReplayManager {
     private static final Logger log = Logger.getLogger(ReplayManager.class.getName());
 
-    private static final String LAST_PATH = AppPaths.REPLAY_LAST_FILE.toString();
-    private static final String BEST_PATH = AppPaths.REPLAY_BEST_FILE.toString();
+    private static String lastPath = AppPaths.REPLAY_LAST_FILE.toString();
+    private static String bestPath = AppPaths.REPLAY_BEST_FILE.toString();
+
+    /**
+     * Overrides the "last replay" file path (primarily for tests). If null/blank, resets to the default.
+     */
+    public static void setLastPath(String path) {
+        if (path == null || path.isBlank()) {
+            lastPath = AppPaths.REPLAY_LAST_FILE.toString();
+        } else {
+            lastPath = path;
+        }
+    }
+
+    /**
+     * Overrides the "best replay" file path (primarily for tests). If null/blank, resets to the default.
+     */
+    public static void setBestPath(String path) {
+        if (path == null || path.isBlank()) {
+            bestPath = AppPaths.REPLAY_BEST_FILE.toString();
+        } else {
+            bestPath = path;
+        }
+    }
 
     /**
      * Returns whether a "last run" replay exists on disk.
      *
      * @return {@code true} if the last replay file exists
      */
-    public static boolean hasLast() { return new File(LAST_PATH).exists(); }
+    public static boolean hasLast() { return new File(lastPath).exists(); }
     /**
      * Returns whether a "best run" replay exists on disk.
      *
      * @return {@code true} if the best replay file exists
      */
-    public static boolean hasBest() { return new File(BEST_PATH).exists(); }
+    public static boolean hasBest() { return new File(bestPath).exists(); }
 
     /**
      * Loads the most recent replay.
      *
      * @return optional replay data
      */
-    public static Optional<ReplayData> loadLast() { return load(LAST_PATH); }
+    public static Optional<ReplayData> loadLast() { return load(lastPath); }
     /**
      * Loads the best recorded replay (highest score).
      *
      * @return optional replay data
      */
-    public static Optional<ReplayData> loadBest() { return load(BEST_PATH); }
+    public static Optional<ReplayData> loadBest() { return load(bestPath); }
 
     /**
      * Saves a replay as the "last run" replay.
      *
      * @param data replay data to save
      */
-    public static void saveLast(ReplayData data) { save(LAST_PATH, data); }
+    public static void saveLast(ReplayData data) { save(lastPath, data); }
 
     /**
      * Saves the replay as the "best run" replay if it beats the stored best score.
@@ -60,9 +82,9 @@ public class ReplayManager {
      * @param data replay data to consider
      */
     public static void saveBestIfHigher(ReplayData data) {
-        int currentBest = load(BEST_PATH).map(d -> d.finalScore).orElse(-1);
+        int currentBest = load(bestPath).map(d -> d.finalScore).orElse(-1);
         if (data.finalScore > currentBest) {
-            save(BEST_PATH, data);
+            save(bestPath, data);
         }
     }
 

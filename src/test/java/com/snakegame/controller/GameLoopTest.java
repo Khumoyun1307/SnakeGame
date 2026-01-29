@@ -6,6 +6,7 @@ import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameEvent;
 import com.snakegame.model.GameState;
 import com.snakegame.mode.GameMode;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.controller.GameLoop}.
  */
-class GameLoopTest {
+class GameLoopTest extends SnakeTestBase {
 
     @Test
     void actionPerformed_runsTickCallbacks_andPassesEventsToHandler() {

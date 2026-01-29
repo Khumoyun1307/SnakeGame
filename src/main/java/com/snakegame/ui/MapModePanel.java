@@ -35,9 +35,9 @@ public class MapModePanel extends JPanel {
         }
 
         // Determine initial selection
-        selectedMap = (GameSettings.getCurrentMode() == GameMode.STANDARD)
-                ? 0
-                : GameSettings.getSelectedMapId();
+        selectedMap = (GameSettings.getCurrentMode() == GameMode.MAP_SELECT)
+                ? GameSettings.getSelectedMapId()
+                : 0;
 
         // Title
         JLabel title = new JLabel("🗺 Select Map", SwingConstants.CENTER);
@@ -68,6 +68,7 @@ public class MapModePanel extends JPanel {
         save.addActionListener(e -> {
             if (selectedMap == 0) {
                 GameSettings.setCurrentMode(GameMode.STANDARD);
+                GameSettings.setSelectedMapId(1);
             } else {
                 GameSettings.setCurrentMode(GameMode.MAP_SELECT);
                 GameSettings.setSelectedMapId(selectedMap);

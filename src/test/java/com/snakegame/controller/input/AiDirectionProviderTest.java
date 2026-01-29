@@ -7,6 +7,7 @@ import com.snakegame.model.Direction;
 import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameState;
 import com.snakegame.mode.GameMode;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.controller.input.AiDirectionProvider}.
  */
-class AiDirectionProviderTest {
+class AiDirectionProviderTest extends SnakeTestBase {
 
     private static SettingsSnapshot snapshot(GameMode mode) {
         return new SettingsSnapshot(

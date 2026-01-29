@@ -2,6 +2,7 @@ package com.snakegame.mode;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.model.GameConfig;
+import com.snakegame.util.AppPaths;
 
 import java.awt.Point;
 import java.io.BufferedReader;
@@ -33,6 +34,15 @@ public class MapManager {
     private static final Map<Integer, MapConfig> maps = new HashMap<>();
     private static final Logger log = Logger.getLogger(MapManager.class.getName());
 
+    private static final String DEV_MAP_GLOB = "map*_developer.txt";
+    private static final Pattern DEV_MAP_PATTERN = Pattern.compile("map(\\d+)_developer\\.txt");
+
+    /** Developer maps are stored in a per-user writable directory (not inside resources/ or the jar). */
+    private static final Path DEV_MAPS_DIR = AppPaths.DATA_DIR.resolve("dev-maps");
+
+    /** Legacy developer map location from older builds / local dev runs. */
+    private static final Path LEGACY_DEV_MAPS_DIR = Paths.get("resources", "maps");
+
     static {
         // Load only the packaged resource maps at startup
         for (int i = 1; i <= RESOURCE_MAP_COUNT; i++) {
@@ -53,22 +63,9 @@ public class MapManager {
      */
     public static void loadDeveloperMaps() {
         if (!GameSettings.isDeveloperModeEnabled()) return;
-        Path dir = Paths.get("resources", "maps");
-        if (!Files.exists(dir)) return;
-        Pattern pat = Pattern.compile("map(\\d+)_developer\\.txt");
-        try (DirectoryStream<Path> ds = Files.newDirectoryStream(dir, "map*_developer.txt")) {
-            for (Path fp : ds) {
-                Matcher m = pat.matcher(fp.getFileName().toString());
-                if (!m.matches()) continue;
-                int id = Integer.parseInt(m.group(1));
-                try (BufferedReader reader = Files.newBufferedReader(fp)) {
-                    List<Point> pts = readPoints(reader);
-                    maps.put(id, new MapConfig(id, pts));
-                }
-            }
-        } catch (IOException e) {
-            log.log(Level.WARNING, "Failed to load developer maps from: " + dir, e);
-        }
+
+        migrateLegacyDeveloperMapsIfPresent();
+        loadDeveloperMapsFromDirectory(DEV_MAPS_DIR);
     }
 
     /**
@@ -76,7 +73,7 @@ public class MapManager {
      */
     public static void saveMapConfig(int id, List<Point> obstacles) {
         // 1) Write out to developer file
-        Path dir = Paths.get("resources", "maps");
+        Path dir = DEV_MAPS_DIR;
         try {
             if (!Files.exists(dir)) Files.createDirectories(dir);
             Path file = dir.resolve("map" + id + "_developer.txt");
@@ -91,6 +88,7 @@ public class MapManager {
         } catch (IOException e) {
             log.log(Level.WARNING, "Failed to save developer map: " + id, e);
         }
+
         // 2) Immediately update in-memory cache
         List<Point> pts = new ArrayList<>(obstacles);
         maps.put(id, new MapConfig(id, pts));
@@ -119,6 +117,46 @@ public class MapManager {
     /** True if this id exists in the packaged (non-developer) map set. */
     public static boolean isPackagedMapId(int id) {
         return id >= 1 && id <= RESOURCE_MAP_COUNT;
+    }
+
+    private static void loadDeveloperMapsFromDirectory(Path dir) {
+        if (!Files.isDirectory(dir)) return;
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(dir, DEV_MAP_GLOB)) {
+            for (Path fp : ds) {
+                Matcher m = DEV_MAP_PATTERN.matcher(fp.getFileName().toString());
+                if (!m.matches()) continue;
+                int id = Integer.parseInt(m.group(1));
+                try (BufferedReader reader = Files.newBufferedReader(fp)) {
+                    List<Point> pts = readPoints(reader);
+                    maps.put(id, new MapConfig(id, pts));
+                }
+            }
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Failed to load developer maps from: " + dir, e);
+        }
+    }
+
+    /**
+     * Best-effort migration from the legacy developer-map folder to the per-user AppPaths directory.
+     *
+     * <p>Copies files once and does not delete the legacy originals automatically.</p>
+     */
+    private static void migrateLegacyDeveloperMapsIfPresent() {
+        if (!Files.isDirectory(LEGACY_DEV_MAPS_DIR)) return;
+        try (DirectoryStream<Path> ds = Files.newDirectoryStream(LEGACY_DEV_MAPS_DIR, DEV_MAP_GLOB)) {
+            Files.createDirectories(DEV_MAPS_DIR);
+            for (Path legacyFile : ds) {
+                Path target = DEV_MAPS_DIR.resolve(legacyFile.getFileName().toString());
+                if (Files.exists(target)) continue;
+                try {
+                    Files.copy(legacyFile, target);
+                } catch (IOException e) {
+                    log.log(Level.WARNING, "Failed to migrate developer map: " + legacyFile, e);
+                }
+            }
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Failed to scan legacy developer maps from: " + LEGACY_DEV_MAPS_DIR, e);
+        }
     }
 
     private static List<Point> readPoints(BufferedReader reader) throws IOException {

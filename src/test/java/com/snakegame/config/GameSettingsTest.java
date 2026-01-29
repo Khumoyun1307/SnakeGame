@@ -2,6 +2,7 @@ package com.snakegame.config;
 
 import com.snakegame.ai.AiMode;
 import com.snakegame.mode.GameMode;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link GameSettings}.
  */
-class GameSettingsTest {
+class GameSettingsTest extends SnakeTestBase {
 
     @Test
     void setDifficultyLevel_clampsAndUpdatesDifficultyEnum() {

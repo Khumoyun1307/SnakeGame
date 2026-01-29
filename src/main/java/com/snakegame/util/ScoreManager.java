@@ -87,7 +87,13 @@ public class ScoreManager {
 
         long timeSurvivedMs = gameState.getElapsedSimTimeMs();
 
-        String mode = GameSettings.getCurrentMode().name();
+        GameMode currentMode = GameSettings.getCurrentMode();
+        // AI runs are not eligible for online submission.
+        if (currentMode == GameMode.AI) {
+            return;
+        }
+
+        String mode = currentMode.name();
 
         int mapIdToSubmit;
         if (mode.equals(GameMode.MAP_SELECT.name())) {

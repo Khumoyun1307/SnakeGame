@@ -1,5 +1,6 @@
 package com.snakegame.ai;
 
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link AStarPathfinder}.
  */
-class AStarPathfinderTest {
+class AStarPathfinderTest extends SnakeTestBase {
 
     private final AStarPathfinder pathfinder = new AStarPathfinder();
 

@@ -4,6 +4,7 @@ import com.snakegame.config.GameSettings;
 import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.GameState;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 /**
  * Smoke test for {@link com.snakegame.view.GameRenderer}.
  */
-class GameRendererSmokeTest {
+class GameRendererSmokeTest extends SnakeTestBase {
 
     private static SettingsSnapshot settings(boolean showGrid, boolean movingObstacles) {
         return new SettingsSnapshot(

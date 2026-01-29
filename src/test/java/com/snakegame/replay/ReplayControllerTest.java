@@ -5,6 +5,7 @@ import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.Direction;
 import com.snakegame.model.GameState;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.replay.ReplayController}.
  */
-class ReplayControllerTest {
+class ReplayControllerTest extends SnakeTestBase {
 
     private static SettingsSnapshot snapshot() {
         return new SettingsSnapshot(

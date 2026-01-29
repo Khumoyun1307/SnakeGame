@@ -1,6 +1,7 @@
 package com.snakegame.util;
 
 import com.snakegame.model.GameState;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.util.ScoreManager}.
  */
-class ScoreManagerTest {
+class ScoreManagerTest extends SnakeTestBase {
 
     @TempDir
     Path tmp;

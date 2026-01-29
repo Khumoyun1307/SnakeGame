@@ -178,7 +178,7 @@ public class GameState {
 
         GameMode mode = currentMode();
 
-        if (mode == GameMode.STANDARD) {
+        if (mode == GameMode.STANDARD || mode == GameMode.AI) {
             if (obstaclesEnabled()) {
                 generateObstacles(15);
             }

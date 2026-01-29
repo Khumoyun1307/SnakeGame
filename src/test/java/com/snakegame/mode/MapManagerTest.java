@@ -1,5 +1,6 @@
 package com.snakegame.mode;
 
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -7,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link MapManager}.
  */
-class MapManagerTest {
+class MapManagerTest extends SnakeTestBase {
 
     @Test
     void packagedMaps_areLoadedAndExposedViaIds() {

@@ -4,6 +4,8 @@ import com.snakegame.ai.AiMode;
 import com.snakegame.config.GameSettings;
 import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
+import com.snakegame.mode.MapManager;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link GameState}.
  */
-class GameStateTest {
+class GameStateTest extends SnakeTestBase {
 
     private static SettingsSnapshot snapshot(GameMode mode,
                                             int selectedMapId,
@@ -243,6 +245,20 @@ class GameStateTest {
                 state.consumeEvents();
             }
             assertEquals(1, state.getMovingObstacles().size());
+        }
+    }
+
+    @Test
+    void aiMode_doesNotInheritMapSelectObstacles() {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            int mapIdWithObstacles = 5;
+            var cfg = MapManager.getMap(mapIdWithObstacles);
+            assertNotNull(cfg);
+            assertFalse(cfg.getObstacles().isEmpty());
+
+            SettingsSnapshot ss = snapshot(GameMode.AI, mapIdWithObstacles, 20, false, false, 0, false);
+            GameState state = new GameState(123L, false, ss);
+            assertTrue(state.getObstacles().isEmpty());
         }
     }
 }

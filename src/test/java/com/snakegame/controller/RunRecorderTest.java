@@ -4,6 +4,7 @@ import com.snakegame.model.Direction;
 import com.snakegame.mode.GameMode;
 import com.snakegame.replay.ReplayEvent;
 import com.snakegame.testutil.Reflect;
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.controller.RunRecorder}.
  */
-class RunRecorderTest {
+class RunRecorderTest extends SnakeTestBase {
 
     @Test
     void recordDirectionChange_recordsOnlyForNonAiRuns() {

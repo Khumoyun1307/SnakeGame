@@ -2,6 +2,7 @@ package com.snakegame.ai;
 
 import com.snakegame.model.Direction;
 import com.snakegame.model.GameConfig;
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.awt.Point;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link Cell}.
  */
-class CellTest {
+class CellTest extends SnakeTestBase {
 
     @Test
     void fromPixel_and_toPixel_roundTrip() {

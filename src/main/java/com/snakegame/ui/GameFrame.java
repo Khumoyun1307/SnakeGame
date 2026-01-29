@@ -1,12 +1,15 @@
 package com.snakegame.ui;
 
 import com.snakegame.config.GameSettings;
-import com.snakegame.mode.GameMode;
-import com.snakegame.mode.MapManager;
 import com.snakegame.model.GameConfig;
 import com.snakegame.model.GameSnapshot;
+import com.snakegame.ai.AiMode;
 import com.snakegame.sound.BackgroundMusicPlayer;
 import com.snakegame.sound.MusicManager;
+import com.snakegame.ui.flow.GameFrameMenuController;
+import com.snakegame.ui.flow.MenuFlowApplier;
+import com.snakegame.ui.flow.MenuFlowDecider;
+import com.snakegame.util.GameSaveManager;
 import com.snakegame.util.ProgressManager;
 import com.snakegame.view.GamePanel;
 import javax.swing.*;
@@ -20,13 +23,14 @@ import java.awt.event.WindowEvent;
  *
  * <p>Switches between panels such as the main menu, gameplay, settings, stats, and replay views.</p>
  */
-public class GameFrame extends JFrame {
+public class GameFrame extends JFrame implements GameFrameMenuController.Host {
 
     private final CardLayout cardLayout;
     private final JPanel cardPanel;
     private GamePanel gamePanel;
     private MainMenuPanel menuPanel;
     private ReplayPanel replayPanel;
+    private final GameFrameMenuController menuController;
 
     /**
      * Creates and displays the main game window.
@@ -54,20 +58,11 @@ public class GameFrame extends JFrame {
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
+        this.menuController = new GameFrameMenuController(this);
 
         // Panels
         this.menuPanel = new MainMenuPanel(this::handleMenuAction);
         recreateGamePanel();
-        gamePanel.addPropertyChangeListener("goToMenu", evt -> {
-            cardLayout.show(cardPanel, "menu");
-            this.menuPanel.refreshContinueButton(); // in-session update
-            MusicManager.update(MusicManager.Screen.MAIN_MENU);
-        });
-        gamePanel.addPropertyChangeListener("showSettings", evt -> {
-            BackgroundMusicPlayer.stop();      // optional: stop music
-            cardLayout.show(cardPanel, "settings");
-            MusicManager.update(MusicManager.Screen.MAIN_MENU);
-        });
 
         SettingsPanel settingsPanel = new SettingsPanel(e -> cardLayout.show(cardPanel, "menu"));
         StatsPanel statsPanel = new StatsPanel(e -> cardLayout.show(cardPanel, "menu"));
@@ -78,10 +73,13 @@ public class GameFrame extends JFrame {
 
         // Add cards
         cardPanel.add(this.menuPanel, "menu");
-        cardPanel.add(gamePanel, "game");
         cardPanel.add(replayPanel, "replay");
         cardPanel.add(settingsPanel, "settings");
         cardPanel.add(statsPanel, "stats");
+        cardPanel.putClientProperty("menu", this.menuPanel);
+        cardPanel.putClientProperty("replay", replayPanel);
+        cardPanel.putClientProperty("settings", settingsPanel);
+        cardPanel.putClientProperty("stats", statsPanel);
 
         this.add(cardPanel);
         this.pack();
@@ -104,134 +102,85 @@ public class GameFrame extends JFrame {
     }
 
     private void handleMenuAction(ActionEvent e) {
-        switch (e.getActionCommand()) {
-            case "play" -> {
-                // "Play" starts STANDARD unless the user explicitly chose MAP_SELECT in the map menu.
-                // (AI/RACE have their own menu entries and should not "stick" to the Play button.)
-                if (GameSettings.getCurrentMode() == GameMode.AI || GameSettings.getCurrentMode() == GameMode.RACE) {
-                    GameSettings.setCurrentMode(GameMode.MAP_SELECT);
-                }
+        menuController.handleActionCommand(e.getActionCommand());
+    }
 
-                // Prevent developer-only map selections leaking into normal play.
-                if (!GameSettings.isDeveloperModeEnabled()) {
-                    int mapId = GameSettings.getSelectedMapId();
-                    if (mapId > 0 && !MapManager.isPackagedMapId(mapId)) {
-                        GameSettings.setSelectedMapId(1);
-                        if (GameSettings.getCurrentMode() != GameMode.STANDARD) GameSettings.setCurrentMode(GameMode.STANDARD);
-                    }
-                }
+    @Override
+    public MenuFlowDecider.MenuState menuState() {
+        return new MenuFlowDecider.MenuState(
+                GameSettings.getCurrentMode(),
+                GameSettings.getSelectedMapId(),
+                GameSettings.isDeveloperModeEnabled()
+        );
+    }
 
-                ProgressManager.clearSavedGame();
-                recreateGamePanel();
-                showGameCardExact();
-                gamePanel.startGame();
+    @Override
+    public void applyStartDecision(MenuFlowDecider.StartDecision decision) {
+        MenuFlowApplier.applyStartDecision(decision);
+    }
 
-                MusicManager.update(MusicManager.Screen.GAMEPLAY);
-            }
-            case "race" -> {
-                GameSettings.setCurrentMode(GameMode.RACE);
-                GameSettings.setSelectedMapId(1);
-                recreateGamePanel();
-                showGameCardExact();
-                gamePanel.startGame();
+    @Override
+    public void startNewGame() {
+        recreateGamePanel();
+        showGameCardExact();
+        gamePanel.startGame();
+        MusicManager.update(MusicManager.Screen.GAMEPLAY);
+    }
 
-                MusicManager.update(MusicManager.Screen.GAMEPLAY);
-            }
-            case "aiMenu" -> {
-                AiModePanel aiPanel = new AiModePanel(
-                        () -> cardLayout.show(cardPanel, "menu"),
-                        (selectedAiMode) -> {
-                            GameSettings.setAiMode(selectedAiMode);
-                            GameSettings.setCurrentMode(GameMode.AI);
+    @Override
+    public void startGameFromSnapshot(GameSnapshot snapshot) {
+        recreateGamePanel(snapshot);
+        showGameCardExact();
+        gamePanel.startGame();
+    }
 
-                            ProgressManager.clearSavedGame();
-                            recreateGamePanel();
-                            cardLayout.show(cardPanel, "game");
-                            gamePanel.startGame();
-                            MusicManager.update(MusicManager.Screen.GAMEPLAY);
-                        }
-                );
-                replaceCard("aiMode", aiPanel);
-                cardLayout.show(cardPanel, "aiMode");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
+    @Override
+    public void replaceCardPanel(String cardName, JPanel panel) {
+        replaceCard(cardName, panel);
+    }
 
-            case "mode" -> {
-                MapModePanel modePanel = new MapModePanel(() -> cardLayout.show(cardPanel, "menu"));
-                replaceCard("mode", modePanel);
-                cardLayout.show(cardPanel, "mode");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "replay" -> {
-                replayPanel.onShow();
-                cardLayout.show(cardPanel, "replay");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "difficulty" -> {
-                JPanel diffPanel = new DifficultyPanel(() -> cardLayout.show(cardPanel, "menu"));
-                replaceCard("difficulty", diffPanel);
-                cardLayout.show(cardPanel, "difficulty");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "leaderboard" -> {
-                LeaderboardPanel lb = new LeaderboardPanel(() -> {
-                    cardLayout.show(cardPanel, "menu");
-                    MusicManager.update(MusicManager.Screen.MAIN_MENU);
-                });
-                replaceCard("leaderboard", lb);
-                cardLayout.show(cardPanel, "leaderboard");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "settings" -> {
-                SettingsPanel settingsPanel = new SettingsPanel(evt ->
-                {
-                    cardLayout.show(cardPanel, "menu");
-                    // re-evaluate menu music after toggling
-                    MusicManager.update(MusicManager.Screen.MAIN_MENU);
-                });
+    @Override
+    public void showCard(String cardName) {
+        cardLayout.show(cardPanel, cardName);
+    }
 
-                replaceCard("settings", settingsPanel);
-                cardLayout.show(cardPanel, "settings");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "stats" -> {
-                StatsPanel statsPanel = new StatsPanel(evt -> cardLayout.show(cardPanel, "menu"));
-                replaceCard("stats", statsPanel);
-                cardLayout.show(cardPanel, "stats");
-                MusicManager.update(MusicManager.Screen.MAIN_MENU);
-            }
-            case "exit" -> {
-                int choice = JOptionPane.showConfirmDialog(
-                        this,
-                        "Are you sure you want to quit the game?",
-                        "Confirm Exit",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
-                    );
-                    if (choice == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
-            }
-            case "developer" -> {
-                MapEditorPanel editor = new MapEditorPanel(() -> cardLayout.show(cardPanel, "menu"));
-                cardPanel.add(editor, "mapEditor");
-                cardLayout.show(cardPanel, "mapEditor");
-            }
+    @Override
+    public void onReplayShow() {
+        replayPanel.onShow();
+    }
 
-            case "continue" -> {
-                var opt = ProgressManager.loadGame();
-                if (opt.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "No saved game found.");
-                    return;
-                }
-                ProgressManager.clearSavedGame();
-                recreateGamePanel(opt.get());
-                showGameCardExact();
-                gamePanel.startGame();
-                MusicManager.update(MusicManager.Screen.GAMEPLAY);
-            }
+    @Override
+    public void updateMusic(MusicManager.Screen screen) {
+        MusicManager.update(screen);
+    }
 
+    @Override
+    public void showMessage(String message) {
+        JOptionPane.showMessageDialog(this, message);
+    }
+
+    @Override
+    public void confirmAndExit() {
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to quit the game?",
+                "Confirm Exit",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+        if (choice == JOptionPane.YES_OPTION) {
+            System.exit(0);
         }
+    }
+
+    @Override
+    public void setAiMode(AiMode mode) {
+        GameSettings.setAiMode(mode);
+    }
+
+    @Override
+    public java.util.Optional<GameSaveManager.ContinueSession> beginContinue() {
+        return ProgressManager.beginContinue();
     }
 
     private void recreateGamePanel() { recreateGamePanel(null); }
@@ -259,17 +208,16 @@ public class GameFrame extends JFrame {
         });
 
         cardPanel.add(gamePanel, "game");
+        cardPanel.putClientProperty("game", gamePanel);
     }
 
     private void replaceCard(String cardName, JPanel newPanel) {
-        Component[] components = cardPanel.getComponents();
-        for (Component c : components) {
-            if (cardPanel.getClientProperty(cardName) == c || cardName.equals(cardPanel.getName())) {
-                cardPanel.remove(c);
-                break;
-            }
+        Object existing = cardPanel.getClientProperty(cardName);
+        if (existing instanceof Component old) {
+            cardPanel.remove(old);
         }
         cardPanel.add(newPanel, cardName);
+        cardPanel.putClientProperty(cardName, newPanel);
     }
 
     private void setFrameToBoardSize() {

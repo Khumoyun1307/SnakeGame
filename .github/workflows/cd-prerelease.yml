@@ -1,0 +1,275 @@
+name: CD - Prerelease
+
+on:
+  workflow_run:
+    workflows: ["CI"]          # must match `name: CI`
+    types: [completed]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write              # create tags + GitHub prereleases
+
+concurrency:
+  group: prerelease-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  meta:
+    # Only run automatically when CI succeeded (and only for pushes to main/develop).
+    # Manual runs via workflow_dispatch still work.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        (
+          github.event.workflow_run.head_branch == 'main' ||
+          github.event.workflow_run.head_branch == 'develop'
+        )
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+      branch: ${{ steps.vars.outputs.branch }}
+      tag: ${{ steps.vars.outputs.tag }}
+      commitish: ${{ steps.vars.outputs.commitish }}
+    steps:
+      - id: vars
+        shell: bash
+        run: |
+          # workflow_run provides the tested commit SHA / branch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            SHA="${GITHUB_SHA}"
+            BRANCH="${GITHUB_REF_NAME}"
+          else
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+          fi
+
+          SHORT="${SHA:0:7}"
+
+          # tag like: pre-main-a1b2c3d (slashes replaced)
+          SAFE_BRANCH="${BRANCH//\//-}"
+          TAG="pre-${SAFE_BRANCH}-${SHORT}"
+
+          echo "short_sha=$SHORT" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "commitish=$SHA" >> "$GITHUB_OUTPUT"
+
+  jar:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.commitish }}
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR (skip tests - CI already passed)
+        run: ./mvnw -B clean package -DskipTests
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar
+          path: target/SnakeGame.jar
+
+  exe:
+    needs: meta
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.commitish }}
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR (skip tests - CI already passed)
+        run: ./mvnw -B clean package -DskipTests
+        shell: bash
+
+      - name: Install WiX (needed for jpackage exe)
+        run: choco install wixtoolset -y
+        shell: powershell
+
+      - name: Build EXE with jpackage
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $icon = "packaging/windows/snake_icon.ico"
+          jpackage `
+            --type exe `
+            --name "SnakeGame" `
+            --input "target" `
+            --main-jar "SnakeGame.jar" `
+            --main-class "com.snakegame.SnakeGame" `
+            --icon $icon `
+            --dest "dist" `
+            --win-shortcut `
+            --win-menu `
+            --win-dir-chooser
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe
+          path: dist/*.exe
+
+  win_portable:
+    needs: meta
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.commitish }}
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR (skip tests - CI already passed)
+        run: ./mvnw -B clean package -DskipTests
+        shell: bash
+
+      - name: Build portable app-image (jpackage)
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $icon = "packaging/windows/snake_icon.ico"
+          jpackage `
+            --type app-image `
+            --name "SnakeGame" `
+            --input "target" `
+            --main-jar "SnakeGame.jar" `
+            --main-class "com.snakegame.SnakeGame" `
+            --icon $icon `
+            --dest "dist"
+
+          $zip = "dist/SnakeGame-portable-windows.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "dist/SnakeGame" -DestinationPath $zip
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-portable
+          path: dist/SnakeGame-portable-windows.zip
+
+  linux_portable:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.commitish }}
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR (skip tests - CI already passed)
+        run: ./mvnw -B clean package -DskipTests
+
+      - name: Build portable app-image (jpackage)
+        run: |
+          mkdir -p dist
+          jpackage \
+            --type app-image \
+            --name "SnakeGame" \
+            --input "target" \
+            --main-jar "SnakeGame.jar" \
+            --main-class "com.snakegame.SnakeGame" \
+            --dest "dist"
+          tar -C dist -czf dist/SnakeGame-portable-linux.tar.gz SnakeGame
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-portable
+          path: dist/SnakeGame-portable-linux.tar.gz
+
+  mac_dmg:
+    needs: meta
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.commitish }}
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Set up Java (Temurin 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build JAR (skip tests - CI already passed)
+        run: ./mvnw -B clean package -DskipTests
+
+      - name: Build macOS DMG (jpackage)
+        run: |
+          mkdir -p dist
+          jpackage \
+            --type dmg \
+            --name "SnakeGame" \
+            --input "target" \
+            --main-jar "SnakeGame.jar" \
+            --main-class "com.snakegame.SnakeGame" \
+            --dest "dist"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: dist/*.dmg
+
+  publish:
+    needs: [meta, jar, exe, win_portable, linux_portable, mac_dmg]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Publish GitHub Prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: ${{ needs.meta.outputs.tag }}
+          target_commitish: ${{ needs.meta.outputs.commitish }}
+          name: Prerelease ${{ needs.meta.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            release-assets/jar/SnakeGame.jar
+            release-assets/exe/*.exe
+            release-assets/win-portable/*.zip
+            release-assets/linux-portable/*.tar.gz
+            release-assets/dmg/*.dmg

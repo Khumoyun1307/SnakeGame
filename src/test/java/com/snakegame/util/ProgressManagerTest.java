@@ -4,6 +4,7 @@ import com.snakegame.config.GameSettings;
 import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.GameSnapshot;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.util.ProgressManager}.
  */
-class ProgressManagerTest {
+class ProgressManagerTest extends SnakeTestBase {
 
     @TempDir
     Path tmp;

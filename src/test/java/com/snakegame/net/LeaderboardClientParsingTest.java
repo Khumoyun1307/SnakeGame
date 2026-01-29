@@ -2,6 +2,7 @@ package com.snakegame.net;
 
 import com.snakegame.net.LeaderboardModels.LeaderboardResponse;
 import com.snakegame.testutil.Reflect;
+import com.snakegame.testutil.SnakeTestBase;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -11,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.net.LeaderboardClient} JSON parsing.
  */
-class LeaderboardClientParsingTest {
+class LeaderboardClientParsingTest extends SnakeTestBase {
 
     @Test
     void parseSession_extractsIdAndToken() {

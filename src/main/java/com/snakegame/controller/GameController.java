@@ -59,7 +59,7 @@ public class GameController implements KeyListener, LoopControl {
                 : new PlayerDirectionProvider();
 
         // Mirror the old behavior: playing a map-based mode unlocks that map.
-        if (runMode != GameMode.STANDARD) {
+        if ((runMode == GameMode.MAP_SELECT || runMode == GameMode.RACE) && !GameSettings.isDeveloperModeEnabled()) {
             ProgressManager.unlockMap(gameState.getCurrentMapId());
         }
 

@@ -1,10 +1,11 @@
 package com.snakegame.config;
 
 import com.snakegame.mode.GameMode;
-import com.snakegame.testutil.FileBackups;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
-import com.snakegame.util.AppPaths;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -18,31 +19,38 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link GameSettingsManager}.
  */
-class GameSettingsManagerTest {
+class GameSettingsManagerTest extends SnakeTestBase {
 
-    private static final Path SETTINGS_PATH = AppPaths.SETTINGS_FILE;
+    @TempDir
+    Path tmp;
+
+    @AfterEach
+    void resetSettingsPath() {
+        GameSettingsManager.setFilePath(null);
+    }
 
     @Test
     void load_createsFileIfMissing() throws IOException {
-        try (SettingsGuard ignored = new SettingsGuard();
-             FileBackups backups = new FileBackups(SETTINGS_PATH)) {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path settingsPath = tmp.resolve("settings.txt");
+            GameSettingsManager.setFilePath(settingsPath.toString());
 
-            Files.deleteIfExists(SETTINGS_PATH);
-            assertFalse(Files.exists(SETTINGS_PATH));
+            assertFalse(Files.exists(settingsPath));
 
             GameSettingsManager.load();
 
-            assertTrue(Files.exists(SETTINGS_PATH));
+            assertTrue(Files.exists(settingsPath));
             assertNotNull(GameSettings.getPlayerId());
         }
     }
 
     @Test
     void load_sanitizesInvalidUuidAndPersistsNormalizedValues() throws Exception {
-        try (SettingsGuard ignored = new SettingsGuard();
-             FileBackups backups = new FileBackups(SETTINGS_PATH)) {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path settingsPath = tmp.resolve("settings.txt");
+            GameSettingsManager.setFilePath(settingsPath.toString());
 
-            Files.createDirectories(SETTINGS_PATH.getParent());
+            Files.createDirectories(settingsPath.getParent());
 
             Properties p = new Properties();
             p.setProperty("playerId", "not-a-uuid");
@@ -60,7 +68,7 @@ class GameSettingsManagerTest {
             p.setProperty("movingObstaclesAutoIncrement", "false");
             p.setProperty("aiMode", "SAFE");
 
-            try (Writer w = Files.newBufferedWriter(SETTINGS_PATH, StandardCharsets.UTF_8)) {
+            try (Writer w = Files.newBufferedWriter(settingsPath, StandardCharsets.UTF_8)) {
                 p.store(w, "Test");
             }
 
@@ -70,19 +78,20 @@ class GameSettingsManagerTest {
             assertEquals("Tester", GameSettings.getPlayerName());
 
             Properties roundTrip = new Properties();
-            roundTrip.load(Files.newBufferedReader(SETTINGS_PATH, StandardCharsets.UTF_8));
+            roundTrip.load(Files.newBufferedReader(settingsPath, StandardCharsets.UTF_8));
             assertDoesNotThrow(() -> java.util.UUID.fromString(roundTrip.getProperty("playerId")));
         }
     }
 
     @Test
     void load_sanitizesDeveloperMapSelectionWhenDeveloperModeIsOff() throws Exception {
-        try (SettingsGuard ignored = new SettingsGuard();
-             FileBackups backups = new FileBackups(SETTINGS_PATH)) {
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path settingsPath = tmp.resolve("settings.txt");
+            GameSettingsManager.setFilePath(settingsPath.toString());
 
             GameSettings.setDeveloperModeEnabled(false);
 
-            Files.createDirectories(SETTINGS_PATH.getParent());
+            Files.createDirectories(settingsPath.getParent());
 
             Properties p = new Properties();
             p.setProperty("playerId", java.util.UUID.randomUUID().toString());
@@ -100,7 +109,7 @@ class GameSettingsManagerTest {
             p.setProperty("movingObstaclesAutoIncrement", "false");
             p.setProperty("aiMode", "SAFE");
 
-            try (Writer w = Files.newBufferedWriter(SETTINGS_PATH, StandardCharsets.UTF_8)) {
+            try (Writer w = Files.newBufferedWriter(settingsPath, StandardCharsets.UTF_8)) {
                 p.store(w, "Test");
             }
 

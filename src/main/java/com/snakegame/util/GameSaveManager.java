@@ -10,7 +10,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -23,6 +27,66 @@ import java.util.logging.Logger;
 public class GameSaveManager {
     private static String filePath = AppPaths.SAVE_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSaveManager.class.getName());
+
+    private static Path savePath() {
+        return Paths.get(filePath);
+    }
+
+    private static Path resumePath(Path savePath) {
+        return savePath.resolveSibling(savePath.getFileName().toString() + ".resume");
+    }
+
+    private static void move(Path from, Path to) throws IOException {
+        try {
+            Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(from, to, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * Handle for the "Continue" flow: moves the save aside, loads from the moved file, and supports commit/rollback.
+     *
+     * <p>Call {@link #commit()} after gameplay successfully starts. If not committed, {@link #close()} restores the
+     * save file.</p>
+     */
+    public static final class ContinueSession implements AutoCloseable {
+        private final Path saveFile;
+        private final Path resumeFile;
+        private final GameSnapshot snapshot;
+        private boolean committed;
+
+        private ContinueSession(Path saveFile, Path resumeFile, GameSnapshot snapshot) {
+            this.saveFile = saveFile;
+            this.resumeFile = resumeFile;
+            this.snapshot = snapshot;
+        }
+
+        public GameSnapshot snapshot() {
+            return snapshot;
+        }
+
+        public void commit() {
+            if (committed) return;
+            committed = true;
+            try {
+                Files.deleteIfExists(resumeFile);
+            } catch (IOException e) {
+                log.log(Level.WARNING, "Failed to delete resume save file: " + resumeFile, e);
+            }
+        }
+
+        @Override
+        public void close() {
+            if (committed) return;
+            if (!Files.exists(resumeFile) || Files.exists(saveFile)) return;
+            try {
+                move(resumeFile, saveFile);
+            } catch (IOException e) {
+                log.log(Level.SEVERE, "Failed to restore save after failed continue", e);
+            }
+        }
+    }
 
     /**
      * Overrides the save file path (primarily for tests). If null/blank, resets to the default.
@@ -41,16 +105,26 @@ public class GameSaveManager {
      * @return {@code true} if the save file exists
      */
     public static boolean hasSave() {
-        return new File(filePath).exists();
+        Path save = savePath();
+        if (Files.exists(save)) return true;
+        return Files.exists(resumePath(save));
     }
 
     /**
      * Deletes the saved game file if it exists.
      */
     public static void clearSave() {
-        File f = new File(filePath);
-        if (f.exists() && !f.delete()) {
-            log.warning("Failed to delete save file: " + filePath);
+        Path save = savePath();
+        Path resume = resumePath(save);
+        try {
+            Files.deleteIfExists(save);
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Failed to delete save file: " + save, e);
+        }
+        try {
+            Files.deleteIfExists(resume);
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Failed to delete resume save file: " + resume, e);
         }
     }
 
@@ -128,9 +202,61 @@ public class GameSaveManager {
 
         try (Writer w = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
             p.store(w, "Snake Game Save");
+
+            // Clear any stale resume file after writing a fresh save.
+            try {
+                Files.deleteIfExists(resumePath(savePath()));
+            } catch (IOException ignored) {
+                // ignore
+            }
         } catch (IOException e) {
             log.log(Level.SEVERE, "Failed to save game", e);
         }
+    }
+
+    /**
+     * Starts a "Continue" operation by moving the save file to a temporary resume location and loading from it.
+     *
+     * <p>The caller must either {@link ContinueSession#commit()} once gameplay successfully starts, or allow the
+     * session to close without committing to restore the save.</p>
+     *
+     * @return optional continue session
+     */
+    public static Optional<ContinueSession> beginContinue() {
+        Path save = savePath();
+        Path resume = resumePath(save);
+
+        // If a previous continue crashed after moving the file, restore it first so Continue remains available.
+        if (!Files.exists(save) && Files.exists(resume)) {
+            try {
+                move(resume, save);
+            } catch (IOException e) {
+                log.log(Level.WARNING, "Failed to restore prior resume save: " + resume, e);
+            }
+        }
+
+        if (!Files.exists(save)) return Optional.empty();
+
+        try {
+            move(save, resume);
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "Failed to begin continue (move save to resume): " + save + " -> " + resume, e);
+            return Optional.empty();
+        }
+
+        Optional<GameSnapshot> snapOpt = load();
+        if (snapOpt.isEmpty()) {
+            if (!Files.exists(save) && Files.exists(resume)) {
+                try {
+                    move(resume, save);
+                } catch (IOException ignored) {
+                    // ignore
+                }
+            }
+            return Optional.empty();
+        }
+
+        return Optional.of(new ContinueSession(save, resume, snapOpt.get()));
     }
 
     /**
@@ -139,7 +265,9 @@ public class GameSaveManager {
      * @return optional snapshot (empty if missing or unreadable)
      */
     public static Optional<GameSnapshot> load() {
-        File file = new File(filePath);
+        Path save = savePath();
+        Path toLoad = Files.exists(save) ? save : resumePath(save);
+        File file = toLoad.toFile();
         if (!file.exists()) return Optional.empty();
 
         Properties p = new Properties();
@@ -224,7 +352,7 @@ public class GameSaveManager {
 
             return Optional.of(s);
         } catch (Exception ex) {
-            log.log(Level.SEVERE, "Save file corrupted, clearing: " + filePath, ex);
+            log.log(Level.SEVERE, "Save file corrupted, clearing: " + toLoad, ex);
             clearSave();
             return Optional.empty();
         }

@@ -2,6 +2,7 @@ package com.snakegame.model;
 
 import com.snakegame.config.GameSettings;
 import com.snakegame.mode.GameMode;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link GameSnapshot}.
  */
-class GameSnapshotTest {
+class GameSnapshotTest extends SnakeTestBase {
 
     @Test
     void captureFrom_and_restore_roundTripCoreFields() {

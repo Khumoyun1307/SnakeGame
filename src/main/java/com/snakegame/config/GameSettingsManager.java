@@ -22,8 +22,19 @@ import com.snakegame.util.AppPaths;
  * do not leak into non-developer sessions.</p>
  */
 public class GameSettingsManager {
-    private static final String FILE_PATH = AppPaths.SETTINGS_FILE.toString();
+    private static String filePath = AppPaths.SETTINGS_FILE.toString();
     private static final Logger log = Logger.getLogger(GameSettingsManager.class.getName());
+
+    /**
+     * Overrides the settings file path (primarily for tests). If null/blank, resets to the default.
+     */
+    public static void setFilePath(String path) {
+        if (path == null || path.isBlank()) {
+            filePath = AppPaths.SETTINGS_FILE.toString();
+        } else {
+            filePath = path;
+        }
+    }
 
     /**
      * Loads settings from disk into {@link GameSettings}.
@@ -31,7 +42,7 @@ public class GameSettingsManager {
      * <p>If the settings file does not exist, defaults are created and immediately saved.</p>
      */
     public static void load() {
-        File file = new File(FILE_PATH);
+        File file = new File(filePath);
         if (!file.exists()) {
             GameSettings.ensurePlayerId();
             GameSettingsManager.save();
@@ -135,7 +146,7 @@ public class GameSettingsManager {
      * Saves the current {@link GameSettings} values to disk.
      */
     public static void save() {
-        File file = new File(FILE_PATH);
+        File file = new File(filePath);
         File parent = file.getParentFile();
         if (!parent.exists() && !parent.mkdirs()) {
             log.log(Level.SEVERE, "Failed to create settings directory: " + parent.getPath());

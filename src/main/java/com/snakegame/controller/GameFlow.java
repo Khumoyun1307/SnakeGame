@@ -93,7 +93,9 @@ public final class GameFlow implements TickHandler {
                 SoundPlayer.play("eatApple.wav");
             } else if (event instanceof GameEvent.MapAdvanced mapAdvanced && runMode == GameMode.RACE) {
                 int newMapId = mapAdvanced.newMapId();
-                ProgressManager.unlockMap(newMapId);
+                if (!GameSettings.isDeveloperModeEnabled()) {
+                    ProgressManager.unlockMap(newMapId);
+                }
                 GameSettings.setSelectedMapId(newMapId);
             }
         }

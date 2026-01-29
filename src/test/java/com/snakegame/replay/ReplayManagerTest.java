@@ -4,12 +4,12 @@ import com.snakegame.config.GameSettings;
 import com.snakegame.config.SettingsSnapshot;
 import com.snakegame.mode.GameMode;
 import com.snakegame.model.Direction;
-import com.snakegame.testutil.FileBackups;
+import com.snakegame.testutil.SnakeTestBase;
 import com.snakegame.testutil.SettingsGuard;
-import com.snakegame.util.AppPaths;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -20,10 +20,16 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for {@link com.snakegame.replay.ReplayManager}.
  */
-class ReplayManagerTest {
+class ReplayManagerTest extends SnakeTestBase {
 
-    private static final Path LAST_PATH = AppPaths.REPLAY_LAST_FILE;
-    private static final Path BEST_PATH = AppPaths.REPLAY_BEST_FILE;
+    @TempDir
+    Path tmp;
+
+    @AfterEach
+    void resetReplayPaths() {
+        ReplayManager.setLastPath(null);
+        ReplayManager.setBestPath(null);
+    }
 
     private static SettingsSnapshot settingsSnapshot() {
         return new SettingsSnapshot(
@@ -47,11 +53,11 @@ class ReplayManagerTest {
 
     @Test
     void saveLast_and_loadLast_roundTrip() throws Exception {
-        try (SettingsGuard ignored = new SettingsGuard();
-             FileBackups backups = new FileBackups(LAST_PATH, BEST_PATH)) {
-
-            Files.deleteIfExists(LAST_PATH);
-            Files.deleteIfExists(BEST_PATH);
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path lastPath = tmp.resolve("replay_last.txt");
+            Path bestPath = tmp.resolve("replay_best.txt");
+            ReplayManager.setLastPath(lastPath.toString());
+            ReplayManager.setBestPath(bestPath.toString());
 
             ReplayData d = new ReplayData();
             d.seed = 123L;
@@ -75,10 +81,11 @@ class ReplayManagerTest {
 
     @Test
     void saveBestIfHigher_onlyOverwritesWhenScoreImproves() throws Exception {
-        try (SettingsGuard ignored = new SettingsGuard();
-             FileBackups backups = new FileBackups(LAST_PATH, BEST_PATH)) {
-
-            Files.deleteIfExists(BEST_PATH);
+        try (SettingsGuard ignored = new SettingsGuard()) {
+            Path lastPath = tmp.resolve("replay_last.txt");
+            Path bestPath = tmp.resolve("replay_best.txt");
+            ReplayManager.setLastPath(lastPath.toString());
+            ReplayManager.setBestPath(bestPath.toString());
 
             ReplayData best = new ReplayData();
             best.seed = 1L;
