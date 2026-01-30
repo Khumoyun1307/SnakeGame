@@ -21,6 +21,11 @@ public final class MenuFlowApplier {
     public static void applyStartDecision(MenuFlowDecider.StartDecision decision) {
         if (decision == null) return;
 
+        if (decision.modeToSet() == com.snakegame.mode.GameMode.AI
+                && GameSettings.getCurrentMode() != com.snakegame.mode.GameMode.AI) {
+            GameSettings.setAiBaseMode(GameSettings.getCurrentMode());
+        }
+
         if (decision.modeToSet() != GameSettings.getCurrentMode()) {
             GameSettings.setCurrentMode(decision.modeToSet());
         }
@@ -33,4 +38,3 @@ public final class MenuFlowApplier {
         }
     }
 }
-

@@ -36,6 +36,9 @@ public class GameSettings {
 
     private static GameMode currentMode = GameMode.STANDARD;
     private static int selectedMapId = 1;
+    // Used to preserve map behavior when starting an AI-controlled run.
+    // AI is treated as a control mode overlay, not a map mode.
+    private static GameMode aiBaseMode = GameMode.STANDARD;
     private static int raceThreshold = 20;
 
     private static boolean soundEnabled = true;
@@ -146,6 +149,25 @@ public class GameSettings {
         }
         currentMode = mode;
         saveIfEnabled();
+    }
+
+    /**
+     * Returns the base (non-AI) mode used to decide map behavior during AI-controlled runs.
+     *
+     * @return base mode for AI runs
+     */
+    public static GameMode getAiBaseMode() { return aiBaseMode; }
+
+    /**
+     * Sets the base (non-AI) mode used to decide map behavior during AI-controlled runs.
+     *
+     * <p>This is intentionally not persisted; it is derived from the user's last selected mode.</p>
+     *
+     * @param mode base mode to use (defaults to {@link GameMode#STANDARD} when {@code null})
+     */
+    public static void setAiBaseMode(GameMode mode) {
+        if (mode == null) mode = GameMode.STANDARD;
+        aiBaseMode = mode;
     }
 
     /**

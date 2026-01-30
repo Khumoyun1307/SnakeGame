@@ -178,7 +178,12 @@ public class GameState {
 
         GameMode mode = currentMode();
 
-        if (mode == GameMode.STANDARD || mode == GameMode.AI) {
+        boolean mapMode = mode != GameMode.STANDARD && mode != GameMode.AI;
+        if (mode == GameMode.AI && GameSettings.getAiBaseMode() == GameMode.MAP_SELECT) {
+            mapMode = true;
+        }
+
+        if (!mapMode) {
             if (obstaclesEnabled()) {
                 generateObstacles(15);
             }
